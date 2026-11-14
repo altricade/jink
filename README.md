@@ -33,6 +33,9 @@ Fakes can go anywhere between jink's own writes, so `fakedsplit` and
 
 ## Running on Windows
 
+For a step-by-step guide that assumes no developer setup, see
+[docs/testing-windows.md](docs/testing-windows.md).
+
 1. Install Rust from <https://rustup.rs>; its installer offers the Visual
    Studio C++ build tools, which are needed.
 2. Stop zapret first, so two programs don't rewrite the same packets: run
