@@ -9,21 +9,20 @@ publish.workspace = true
 # macOS-only; on other systems the crate is empty.
 [target.'cfg(target_os = "macos")'.dependencies]
 jink-core = { path = "../jink-core" }
+# Builds the replies that turn IPv6 away.
+etherparse.workspace = true
 # Userspace TCP/IP stack: ends app connections inside jink (Apache-2.0).
 ipstack = "1.0.1"
 # BPF capture of jink's own handshakes (libpcap ships with macOS).
 pcap = "2.5.0"
 # Reads and changes the routing table through the routing socket (Apache-2.0).
-route_manager = "0.2.17"
+route_manager = { version = "0.2.17", features = ["async"] }
 # Sockets pinned to the uplink (IP_BOUND_IF).
 socket2 = { version = "0.6.5", features = ["all"] }
 thiserror.workspace = true
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "signal", "time"] }
 # The utun interface (Apache-2.0).
 tun-rs = { version = "2.8.18", features = ["async"] }
-
-[target.'cfg(target_os = "macos")'.dev-dependencies]
-etherparse.workspace = true
 
 [lints]
 workspace = true

@@ -214,11 +214,12 @@ pub enum CaptureError {
     },
 }
 
-/// The capture thread; [`Watcher::stop`] ends it.
+/// The capture thread; [`Watcher::stop`] ends it, and so does dropping (the
+/// thread then ends on its own within a read timeout).
 #[derive(Debug)]
 pub(crate) struct Watcher {
     stop: Arc<AtomicBool>,
-    thread: JoinHandle<Result<(), pcap::Error>>,
+    thread: Option<JoinHandle<Result<(), pcap::Error>>>,
 }
 
 /// How long a capture read waits before checking whether to stop.
@@ -257,15 +258,26 @@ impl Watcher {
             let stop = Arc::clone(&stop);
             std::thread::spawn(move || watch(&mut capture, linktype, &handshakes, &stop))
         };
-        Ok(Self { stop, thread })
+        Ok(Self {
+            stop,
+            thread: Some(thread),
+        })
     }
 
     /// Stops the thread, returning how it ended.
-    pub(crate) fn stop(self) -> Result<(), pcap::Error> {
+    pub(crate) fn stop(mut self) -> Result<(), pcap::Error> {
         self.stop.store(true, Ordering::Relaxed);
-        self.thread.join().unwrap_or(Err(pcap::Error::PcapError(
-            "capture thread panicked".into(),
-        )))
+        self.thread.take().map_or(Ok(()), |thread| {
+            thread.join().unwrap_or(Err(pcap::Error::PcapError(
+                "capture thread panicked".into(),
+            )))
+        })
+    }
+}
+
+impl Drop for Watcher {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
     }
 }
 

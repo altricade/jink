@@ -18,11 +18,19 @@ mod fake;
 #[cfg(target_os = "macos")]
 mod handshake;
 #[cfg(target_os = "macos")]
+mod instance;
+#[cfg(target_os = "macos")]
+mod ipv6;
+#[cfg(target_os = "macos")]
+mod link;
+#[cfg(target_os = "macos")]
 mod relay;
 #[cfg(target_os = "macos")]
 mod route;
 #[cfg(target_os = "macos")]
 mod run;
+#[cfg(target_os = "macos")]
+pub mod service;
 #[cfg(target_os = "macos")]
 mod tun;
 
@@ -30,6 +38,8 @@ mod tun;
 pub use desync::DesyncError;
 #[cfg(target_os = "macos")]
 pub use handshake::CaptureError;
+#[cfg(target_os = "macos")]
+pub use link::LinkError;
 #[cfg(target_os = "macos")]
 pub use relay::RelayError;
 #[cfg(target_os = "macos")]

@@ -2,7 +2,7 @@
 //! packets from and writes them to.
 
 use std::io;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::pin::Pin;
 use std::task::{Context, Poll, ready};
 
@@ -15,6 +15,10 @@ use tun_rs::{AsyncDevice, DeviceBuilder};
 /// clash with real networks.
 pub(crate) const ADDRESS: Ipv4Addr = Ipv4Addr::new(198, 18, 0, 1);
 const PREFIX: u8 = 30;
+/// An IPv6 address, so the interface takes IPv6 routes (to turn IPv6 away,
+/// see [`crate::ipv6`]): a unique local address ("jink" in its global ID).
+const ADDRESS_V6: Ipv6Addr = Ipv6Addr::new(0xfd6a, 0x696e, 0x6b00, 0, 0, 0, 0, 1);
+const PREFIX_V6: u8 = 64;
 pub(crate) const MTU: u16 = 1500;
 
 /// Creates a utun interface (needs root). It disappears, with every route
@@ -22,11 +26,13 @@ pub(crate) const MTU: u16 = 1500;
 pub(crate) fn create() -> io::Result<AsyncDevice> {
     DeviceBuilder::new()
         .ipv4(ADDRESS, PREFIX, None)
+        .ipv6(ADDRESS_V6, PREFIX_V6)
         .mtu(MTU)
         .build_async()
 }
 
-/// One IP packet per read and per write.
+/// One IP packet per read and per write. IPv6 packets never reach the
+/// reader: they are answered here (see [`crate::ipv6`]).
 pub(crate) struct TunIo(pub(crate) AsyncDevice);
 
 impl std::fmt::Debug for TunIo {
@@ -41,9 +47,21 @@ impl AsyncRead for TunIo {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        let n = ready!(self.0.poll_recv(cx, buf.initialize_unfilled()))?;
-        buf.advance(n);
-        Poll::Ready(Ok(()))
+        loop {
+            let space = buf.initialize_unfilled();
+            let n = ready!(self.0.poll_recv(cx, space))?;
+            let packet = space.get(..n).unwrap_or_default();
+            if packet.first().is_some_and(|b| b >> 4 == 6) {
+                if let Some(reply) = crate::ipv6::refusal(packet) {
+                    // Best effort: an unanswered app gives up on IPv6 later
+                    // anyway, and a utun write does not wait in practice.
+                    let _ = self.0.poll_send(cx, &reply);
+                }
+                continue;
+            }
+            buf.advance(n);
+            return Poll::Ready(Ok(()));
+        }
     }
 }
 

@@ -4,10 +4,14 @@
 //! - `jink run <strategy.bat>` runs it: on Windows (as Administrator) with
 //!   WinDivert, `WinDivert64.sys` next to `jink.exe`; on macOS (with sudo)
 //!   through a utun interface.
+//! - `jink service install|uninstall|status` (macOS) runs it at every
+//!   startup instead.
 
 #[cfg(any(windows, target_os = "macos", test))]
 mod entropy;
 mod report;
+#[cfg(target_os = "macos")]
+mod service;
 mod strategy;
 
 use std::io::Write;
@@ -43,6 +47,30 @@ enum Command {
         #[arg(long)]
         allow_partial: bool,
     },
+    /// Run jink as a service: at every startup, without a terminal.
+    #[cfg(target_os = "macos")]
+    Service {
+        #[command(subcommand)]
+        action: ServiceAction,
+    },
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Subcommand)]
+enum ServiceAction {
+    /// Install a strategy as the service and start it (with sudo). It
+    /// replaces the strategy installed before.
+    Install {
+        #[command(flatten)]
+        strategy: StrategyArgs,
+        /// As for `run`.
+        #[arg(long)]
+        allow_partial: bool,
+    },
+    /// Stop and remove the service (with sudo).
+    Uninstall,
+    /// Show whether the service is installed and running.
+    Status,
 }
 
 #[derive(Debug, Args)]
@@ -79,6 +107,12 @@ enum CliError {
     #[cfg(target_os = "macos")]
     #[error(transparent)]
     Tunnel(#[from] jink_macos::RunError),
+    #[cfg(target_os = "macos")]
+    #[error(transparent)]
+    Service(#[from] jink_macos::service::ServiceError),
+    #[cfg(target_os = "macos")]
+    #[error("the strategy must be a .bat file")]
+    NotAFile,
     #[cfg(not(any(windows, target_os = "macos")))]
     #[error("`jink run` needs Windows or macOS; `jink check` works here")]
     RunUnsupported,
@@ -146,51 +180,105 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     Ok(())
 }
 
+/// The engine for a strategy, and how many of its rules pass traffic
+/// unchanged; refused if there are any, unless `allow_partial`.
+#[cfg(target_os = "macos")]
+fn macos_engine(
+    args: &StrategyArgs,
+    allow_partial: bool,
+) -> Result<(jink_core::engine::stream::StreamEngine, usize), CliError> {
+    let config = strategy::load(&args.strategy, args.game_filter)?;
+    let entropy = Box::new(entropy::OsSeeded::new().map_err(CliError::Entropy)?);
+    let (engine, unsupported) = jink_core::engine::stream::StreamEngine::partial(config, entropy);
+    if !unsupported.is_empty() && !allow_partial {
+        return Err(CliError::Partial);
+    }
+    Ok((engine, unsupported.len()))
+}
+
 #[cfg(target_os = "macos")]
 fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     use std::collections::HashSet;
     use std::sync::Mutex;
 
-    use jink_core::engine::stream::StreamEngine;
     use jink_macos::Event;
 
-    let config = strategy::load(&args.strategy, args.game_filter)?;
-    let entropy = Box::new(entropy::OsSeeded::new().map_err(CliError::Entropy)?);
-    let (engine, unsupported) = StreamEngine::partial(config, entropy);
-    if !unsupported.is_empty() && !allow_partial {
-        return Err(CliError::Partial);
-    }
-    // Report each distinct problem once, not once per connection. A failed
-    // write to the terminal cannot be reported anywhere, so it is ignored.
+    let (engine, skipped) = macos_engine(args, allow_partial)?;
+    // Report the state each time it changes, and each distinct problem once,
+    // not once per connection. A failed write to the terminal cannot be
+    // reported anywhere, so it is ignored.
+    let state = Mutex::new(String::new());
     let seen = Mutex::new(HashSet::new());
-    let skipped = unsupported.len();
     let summary = jink_macos::run(engine, move |event| {
-        // (kind of problem, example): each kind is reported once.
-        let (kind, example) = match event {
-            Event::Ready { tun, uplink } => {
+        let new_state = match event {
+            Event::Started { tun } => {
                 let _ = writeln!(
                     std::io::stdout().lock(),
-                    "jink: all IPv4 traffic now goes through {tun} and leaves through {uplink}.\n\
-                     jink: desync is active ({skipped} rules pass traffic unchanged).\n\
-                     jink: press Ctrl+C to stop."
+                    "jink: started on {tun} ({skipped} rules pass traffic unchanged). \
+                     Press Ctrl+C to stop."
                 );
                 return;
             }
+            Event::Online { uplink, ipv6 } => {
+                let ipv6 = if ipv6 {
+                    "; IPv6 is turned away, so apps use IPv4"
+                } else {
+                    ""
+                };
+                format!(
+                    "online: all IPv4 traffic goes through jink and leaves through {uplink}{ipv6}"
+                )
+            }
+            Event::Offline => "no network; waiting for one".to_owned(),
+            Event::Unavailable(e) => format!("traffic bypasses jink: {e}"),
+            Event::RoutesLeft(errors) => {
+                report_once(&seen, format!("could not delete routes: {errors:?}"), "");
+                return;
+            }
             Event::Relay { server, error } => {
-                (error.to_string(), format!(" (first seen with {server})"))
+                report_once(
+                    &seen,
+                    error.to_string(),
+                    &format!(" (first seen with {server})"),
+                );
+                return;
             }
             Event::Desync { server, error } => {
-                (error.to_string(), format!(" (first seen with {server})"))
+                report_once(
+                    &seen,
+                    error.to_string(),
+                    &format!(" (first seen with {server})"),
+                );
+                return;
             }
-            Event::CaptureEnded(e) => (format!("handshake capture stopped: {e}"), String::new()),
-            Event::Foreign(source) => (
-                format!("dropped a connection from {source}, which did not come through jink"),
-                String::new(),
-            ),
+            Event::StateFile(e) => {
+                report_once(
+                    &seen,
+                    format!("cannot record routes for cleanup after a crash: {e}"),
+                    "",
+                );
+                return;
+            }
+            Event::CaptureEnded(e) => {
+                report_once(&seen, format!("handshake capture stopped: {e}"), "");
+                return;
+            }
+            Event::Foreign(source) => {
+                report_once(
+                    &seen,
+                    format!("dropped a connection from {source}, which did not come through jink"),
+                    "",
+                );
+                return;
+            }
         };
-        let first = seen.lock().is_ok_and(|mut s| s.insert(kind.clone()));
-        if first {
-            let _ = writeln!(std::io::stderr().lock(), "jink: {kind}{example}");
+        let changed = state.lock().is_ok_and(|mut last| {
+            let changed = *last != new_state;
+            last.clone_from(&new_state);
+            changed
+        });
+        if changed {
+            let _ = writeln!(std::io::stdout().lock(), "jink: {new_state}");
         }
     })?;
     writeln!(
@@ -207,6 +295,19 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     Ok(())
 }
 
+/// Prints `kind` (with `example`) unless it was printed before.
+#[cfg(target_os = "macos")]
+fn report_once(
+    seen: &std::sync::Mutex<std::collections::HashSet<String>>,
+    kind: String,
+    example: &str,
+) {
+    let line = format!("jink: {kind}{example}");
+    if seen.lock().is_ok_and(|mut s| s.insert(kind)) {
+        let _ = writeln!(std::io::stderr().lock(), "{line}");
+    }
+}
+
 #[cfg(not(any(windows, target_os = "macos")))]
 fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     let _ = (args, allow_partial);
@@ -221,6 +322,15 @@ fn main() -> ExitCode {
             strategy,
             allow_partial,
         } => run(strategy, *allow_partial),
+        #[cfg(target_os = "macos")]
+        Command::Service { action } => match action {
+            ServiceAction::Install {
+                strategy,
+                allow_partial,
+            } => service::install(strategy, *allow_partial),
+            ServiceAction::Uninstall => service::uninstall(),
+            ServiceAction::Status => service::status(),
+        },
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
