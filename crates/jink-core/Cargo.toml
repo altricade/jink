@@ -1,0 +1,21 @@
+[package]
+name = "jink-core"
+description = "Platform-independent DPI desync core: packet dissection, L7 parsing, profiles and desync planning."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+aes.workspace = true
+aes-gcm.workspace = true
+etherparse.workspace = true
+hkdf.workspace = true
+sha2.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+etherparse.workspace = true

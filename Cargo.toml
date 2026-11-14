@@ -1,0 +1,47 @@
+[workspace]
+resolver = "3"
+members = ["crates/jink-cli", "crates/jink-core", "crates/jink-macos", "crates/jink-windivert"]
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace.dependencies]
+etherparse = "0.21"
+thiserror = "2"
+# QUIC Initial decryption (RFC 9001 §5). Pure Rust, no OS RNG needed to decrypt.
+aes = "0.9"
+aes-gcm = { version = "0.11", default-features = false, features = ["aes", "alloc"] }
+hkdf = "0.13"
+sha2 = "0.11"
+
+# Quality gates are enforced here, not by convention: every crate opts in with
+# `[lints] workspace = true`, and CI/local runs use `-D warnings`.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unused_must_use = "deny"
+missing_debug_implementations = "deny"
+unreachable_pub = "deny"
+
+[workspace.lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+# Packet parsing handles untrusted input: no panicking shortcuts.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+indexing_slicing = "deny"
+arithmetic_side_effects = "deny"
+as_conversions = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+# Pedantic lints that fight this domain's naming (e.g. `ClientHello` in module `tls`).
+module_name_repetitions = "allow"
+
+[profile.release]
+# Integer overflow in a packet engine must fail loudly, never wrap silently.
+overflow-checks = true

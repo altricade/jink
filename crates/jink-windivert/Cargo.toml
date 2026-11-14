@@ -1,0 +1,19 @@
+[package]
+name = "jink-windivert"
+description = "Windows backend for jink: WinDivert capture loop around the packet-mode engine."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+jink-core = { path = "../jink-core" }
+thiserror.workspace = true
+
+# WinDivert 2.2.2 (LGPL-3.0-or-later). Build with WINDIVERT_STATIC=1 to compile
+# it into the executable; WinDivert64.sys must sit next to the executable.
+[target.'cfg(windows)'.dependencies]
+windivert = "0.6"
+
+[lints]
+workspace = true

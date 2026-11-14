@@ -1,0 +1,9 @@
+# Tests may assert with unwrap/expect/indexing; production code may not.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+allow-panic-in-tests = true
+
+# Protocol and product names that read as words in docs, not code items.
+# ".." keeps clippy's default list.
+doc-valid-idents = ["ClientHello", "ServerHello", "WinDivert", ".."]

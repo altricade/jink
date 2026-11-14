@@ -1,0 +1,6 @@
+[toolchain]
+channel = "1.100.0"
+components = ["clippy", "rustfmt"]
+# Windows is a primary test platform; macOS builds natively on the dev Mac.
+targets = ["x86_64-pc-windows-msvc"]
+profile = "minimal"
