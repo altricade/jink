@@ -3,6 +3,8 @@
 //! (TCP), or decoy payloads (UDP).
 
 mod common;
+#[path = "common/quic.rs"]
+mod quic;
 
 use std::error::Error;
 use std::time::Instant;
@@ -13,7 +15,9 @@ use jink_core::desync::Entropy;
 use jink_core::engine::stream::{
     StreamEngine, StreamError, TcpConnection, TcpPlan, TcpStep, wanted_len,
 };
+use jink_core::l7::quic::{CryptoStream, decrypt_initial};
 use jink_core::packet::{IpHeader, TcpTimestamps, Transport, dissect};
+use quic::{crypto_frame, seal_initial};
 
 type TestResult = Result<(), Box<dyn Error>>;
 
@@ -299,5 +303,37 @@ fn alt13_hostfakesplit_steps() -> TestResult {
         return Err("expected TCP".into());
     };
     assert_eq!((header.seq, payload), (SEQ + 125, &b"www.google.com"[..]));
+    Ok(())
+}
+
+/// Chrome's post-quantum QUIC hello spans two Initial datagrams. The first
+/// is held (its SNI is not readable yet); the second completes the hello
+/// and gets the decoys, which the backend sends before both. Later
+/// datagrams get none.
+#[test]
+fn quic_hello_across_two_datagrams_is_held_then_decoyed() -> TestResult {
+    let config = load_with("general (ALT4).bat", "12", true)?;
+    let repeats = usize::from(config.rules[5].desync.repeats);
+    let mut e = StreamEngine::new(config, Box::new(Counter(0)))?;
+    let google_quic = fixture("quic_initial_www_google_com.bin")?;
+    let mut stream = CryptoStream::default();
+    stream.add_frames(&decrypt_initial(&google_quic)?.plaintext)?;
+    let hello = stream.contiguous().to_vec();
+    let dcid = [9, 8, 7, 6, 5, 4, 3, 2];
+    let d1 = seal_initial(&dcid, 0, &crypto_frame(0, &hello[..100])?)?;
+    let d2 = seal_initial(&dcid, 1, &crypto_frame(100, &hello[100..])?)?;
+    let (local, server) = ("192.168.1.10:55555".parse()?, "142.250.74.4:443".parse()?);
+    let now = Instant::now();
+
+    let first = e.udp_datagram(local, server, &d1, now)?;
+    assert!(first.hold && first.decoys.is_empty(), "{first:?}");
+    let second = e.udp_datagram(local, server, &d2, now)?;
+    assert!(!second.hold);
+    assert_eq!(second.decoys, vec![google_quic; repeats]);
+    let third = e.udp_datagram(local, server, &d2, now)?;
+    assert_eq!((third.hold, third.decoys.len()), (false, 0));
+    let ping = seal_initial(&dcid, 2, &[0x01])?;
+    let probe = e.udp_datagram(local, server, &ping, now)?;
+    assert_eq!((probe.hold, probe.decoys.len()), (false, 0), "PING probe");
     Ok(())
 }

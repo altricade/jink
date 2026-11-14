@@ -6,8 +6,8 @@
 //! WinDivert-style packet diversion exists: it sends fake packets (raw
 //! socket) before the real data and chooses how the data is split into
 //! segments. The fakes carry the connection's real sequence numbers and
-//! timestamps, which a BPF capture of each handshake provides. UDP decoys
-//! are not sent yet.
+//! timestamps, which a BPF capture of each handshake provides. For UDP it
+//! sends decoys from the flow's own socket before the real datagrams.
 //!
 //! Everything here is macOS-only; on other systems the crate is empty.
 

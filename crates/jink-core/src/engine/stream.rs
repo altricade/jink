@@ -98,12 +98,29 @@ impl TcpPlan {
     }
 }
 
-/// What to send before one UDP datagram.
+/// What to do with one UDP datagram.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct UdpPlan {
-    /// Payloads to send first, on the same socket.
+    /// Payloads to send first, on the same socket (before any held
+    /// datagrams too).
     pub decoys: Vec<Vec<u8>>,
+    /// The datagram starts a QUIC hello that continues in the next one:
+    /// keep it back, and send it after the decoys of the next datagram's
+    /// plan (or, if none comes soon, as it is).
+    pub hold: bool,
 }
+
+/// A UDP flow's QUIC hello: still being collected, or settled (seen whole,
+/// given up on, or the flow did not start with QUIC).
+#[derive(Debug)]
+enum QuicHello {
+    Collecting(CryptoStream),
+    Done,
+}
+
+/// Most datagrams of one QUIC hello held back (zapret holds up to 32
+/// packets of a message).
+const MAX_HELD: u8 = 8;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum StreamError {
@@ -128,8 +145,10 @@ pub fn wanted_len(first_bytes: &[u8]) -> Option<usize> {
 pub struct StreamEngine {
     config: Config,
     flows: FlowTable,
-    /// QUIC CRYPTO data per UDP flow, for hellos spanning datagrams.
-    quic: HashMap<FlowKey, CryptoStream>,
+    /// QUIC hello reassembly per UDP flow, for hellos spanning datagrams.
+    quic: HashMap<FlowKey, QuicHello>,
+    /// Datagrams held so far per UDP flow, while its QUIC hello completes.
+    held: HashMap<FlowKey, u8>,
     entropy: Box<dyn Entropy + Send>,
     /// Rules that match as usual but pass traffic unchanged (partial mode).
     disabled: HashSet<usize>,
@@ -175,6 +194,7 @@ impl StreamEngine {
             config,
             flows: FlowTable::default(),
             quic: HashMap::new(),
+            held: HashMap::new(),
             entropy,
             disabled,
         }
@@ -297,7 +317,7 @@ impl StreamEngine {
     ///
     /// # Errors
     /// [`StreamError::Plan`] if the rule cannot be applied; send the
-    /// datagram without decoys.
+    /// datagram (and any held ones) without decoys.
     pub fn udp_datagram(
         &mut self,
         local: SocketAddr,
@@ -306,6 +326,9 @@ impl StreamEngine {
         now: Instant,
     ) -> Result<UdpPlan, StreamError> {
         self.flows.purge(now);
+        let flows = &self.flows;
+        self.quic.retain(|k, _| flows.get(k).is_some());
+        self.held.retain(|k, _| flows.get(k).is_some());
         let key = FlowKey {
             transport: Transport::Udp,
             client: local,
@@ -313,22 +336,50 @@ impl StreamEngine {
         };
         self.flows.client_udp(key, !payload.is_empty(), now);
         let protocol = classify_udp(payload);
-        let first = self
-            .flows
-            .get(&key)
-            .is_some_and(|f| f.client_data_packets() == 1);
-        let inspection = if protocol == Protocol::Quic {
-            let crypto = self.quic.entry(key).or_default();
-            match quic_progress(payload, crypto) {
-                QuicProgress::Hello(i) => {
-                    self.quic.remove(&key);
-                    i
-                }
-                QuicProgress::NeedMore | QuicProgress::Opaque => Inspection::opaque(Protocol::Quic),
-            }
-        } else {
-            Inspection::opaque(protocol)
+        let state = self
+            .quic
+            .entry(key)
+            .or_insert_with(|| QuicHello::Collecting(CryptoStream::default()));
+        let progress = match (protocol, &mut *state) {
+            (Protocol::Quic, QuicHello::Collecting(crypto)) => Some(quic_progress(payload, crypto)),
+            _ => None,
         };
+        let inspection = match progress {
+            Some(QuicProgress::Hello(i)) => {
+                *state = QuicHello::Done;
+                i
+            }
+            Some(QuicProgress::NeedMore) => {
+                let held = self.held.entry(key).or_default();
+                if *held < MAX_HELD {
+                    *held = held.saturating_add(1);
+                    return Ok(UdpPlan {
+                        decoys: Vec::new(),
+                        hold: true,
+                    });
+                }
+                *state = QuicHello::Done;
+                Inspection::opaque(Protocol::Quic)
+            }
+            Some(QuicProgress::Opaque) => {
+                *state = QuicHello::Done;
+                Inspection::opaque(Protocol::Quic)
+            }
+            // Only a flow's first hello is collected: later Initials (ACKs,
+            // retransmissions) are not held.
+            None => {
+                *state = QuicHello::Done;
+                Inspection::opaque(protocol)
+            }
+        };
+        // Decoys go before a flow's first datagram only, as in zapret: the
+        // first one sent, which is the first held one if any were held.
+        let was_held = self.held.remove(&key).is_some();
+        let first = was_held
+            || self
+                .flows
+                .get(&key)
+                .is_some_and(|f| f.client_data_packets() == 1);
         let disabled = &self.disabled;
         let Some(desync) = rule_for(&mut self.flows, &self.config, &key, &inspection)
             .filter(|i| !disabled.contains(i))
@@ -351,7 +402,6 @@ impl StreamEngine {
         let msg = Message {
             protocol: inspection.protocol,
             data: payload,
-            // Decoys only before a flow's first datagram, as zapret.
             offset: usize::from(!first),
             positions: &inspection.positions,
         };
@@ -364,7 +414,10 @@ impl StreamEngine {
                 Wire::Tcp { .. } => None,
             })
             .collect();
-        Ok(UdpPlan { decoys })
+        Ok(UdpPlan {
+            decoys,
+            hold: false,
+        })
     }
 }
 

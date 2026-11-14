@@ -19,11 +19,11 @@ A cross-platform DPI-desync engine in Rust, built by studying zapret
 `crates/jink-windivert` is the Windows backend (WinDivert capture loop and
 filter), `crates/jink-macos` the macOS backend (utun interface, userspace
 TCP/IP stack, relay through sockets pinned to the physical interface, BPF
-handshake capture, raw-socket fakes and split writes for TCP) and `crates/jink-cli` the `jink` command.
+handshake capture, raw-socket fakes and split writes for TCP, decoys for UDP) and `crates/jink-cli` the `jink` command.
 
 Not implemented yet (reported as explicit errors, never silently skipped):
 `fake-tls-mod`, zapret's built-in TLS fake, `multidisorder`, `syndata`,
-`hostfakesplit` without `host=`. On macOS: UDP decoys (QUIC, Discord voice) and IPv6.
+`hostfakesplit` without `host=`. On macOS: IPv6.
 
 On macOS (utun + raw sockets) `seqovl`, `syndata`, `multidisorder` and
 `hostfakesplit` with `altorder=1` cannot be done (they need the kernel's own
@@ -64,7 +64,7 @@ SIMPLE FAKE ALT2. On macOS: ALT, ALT4, ALT8, ALT9, ALT10, FAKE TLS AUTO ALT,
 SIMPLE FAKE, SIMPLE FAKE ALT, SIMPLE FAKE ALT2 (others with
 `--allow-partial`).
 
-## Running on macOS (TCP desync; no UDP decoys yet)
+## Running on macOS
 
 ```sh
 cargo build --release -p jink-cli

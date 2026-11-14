@@ -6,11 +6,11 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
-use jink_core::engine::stream::{StreamEngine, StreamError, TcpStep};
+use jink_core::engine::stream::{StreamEngine, StreamError, TcpStep, UdpPlan};
 
 use crate::fake::RawSender;
 use crate::handshake::{Expected, Handshakes};
-use crate::relay::FirstMessage;
+use crate::relay::{Datagrams, FirstMessage};
 
 /// How long to wait for the capture thread to report a handshake. It has
 /// normally seen the SYN-ACK before the connection even completes.
@@ -27,11 +27,13 @@ pub enum DesyncError {
     Fake(io::Error),
 }
 
-/// What happened to one connection's first message.
+/// What happened to one connection's first message, or a UDP datagram.
 #[derive(Debug)]
 pub(crate) enum Outcome {
     /// Fakes were sent, or the message split, or both.
     Desynced,
+    /// Decoys were sent before a UDP datagram.
+    Decoys,
     /// No rule applied: written whole.
     Unchanged,
     Failed(DesyncError),
@@ -123,6 +125,28 @@ impl FirstMessage for Desyncer {
     fn fake(&self, server: SocketAddr, packet: &[u8]) {
         if let Err(e) = self.raw.send(packet) {
             (self.report)(server, Outcome::Failed(DesyncError::Fake(e)));
+        }
+    }
+}
+
+impl Datagrams for Desyncer {
+    fn datagram(&self, local: SocketAddr, server: SocketAddr, payload: &[u8]) -> UdpPlan {
+        let plan = self
+            .engine
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .udp_datagram(local, server, payload, Instant::now());
+        match plan {
+            Ok(plan) => {
+                if !plan.decoys.is_empty() {
+                    (self.report)(server, Outcome::Decoys);
+                }
+                plan
+            }
+            Err(e) => {
+                (self.report)(server, Outcome::Failed(e.into()));
+                UdpPlan::default()
+            }
         }
     }
 }

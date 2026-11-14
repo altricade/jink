@@ -347,7 +347,14 @@ impl PacketEngine {
             return self.continue_quic_hold(key, hold, packet, dissected, payload);
         }
         let protocol = classify_udp(payload);
-        if protocol != Protocol::Quic {
+        // Only a flow's first datagrams can start its QUIC hello (Chrome
+        // shuffles the hello's CRYPTO frames, so the first may not carry its
+        // start). Later Initials, ACKs mostly, are never held.
+        let first = self
+            .flows
+            .get(&key)
+            .is_some_and(|f| f.client_data_packets() == 1);
+        if protocol != Protocol::Quic || !first {
             return self.apply(
                 key,
                 true,

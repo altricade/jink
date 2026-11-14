@@ -10,7 +10,7 @@ use std::num::NonZeroU32;
 use std::ops::Range;
 use std::time::Duration;
 
-use jink_core::engine::stream::{MAX_MESSAGE, TcpStep, wanted_len};
+use jink_core::engine::stream::{MAX_MESSAGE, TcpStep, UdpPlan, wanted_len};
 use socket2::{Domain, Protocol, Socket, Type};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpSocket, TcpStream, UdpSocket};
@@ -20,6 +20,9 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 /// How long to wait for the rest of a first message (a ClientHello the app
 /// writes in pieces) once it has started.
 const MESSAGE_WAIT: Duration = Duration::from_millis(500);
+/// How long held datagrams (the start of a QUIC hello) wait for the rest
+/// (zapret's hold limit).
+const HOLD_WAIT: Duration = Duration::from_millis(500);
 /// The largest UDP payload.
 const MAX_DATAGRAM: usize = 65_535;
 
@@ -188,39 +191,72 @@ async fn send_steps<W: AsyncWrite + Unpin>(
     Ok(())
 }
 
+/// What a UDP relay asks before sending each datagram of a flow.
+pub(crate) trait Datagrams {
+    /// The plan for `payload`, sent from `local` to `server`.
+    fn datagram(&self, local: SocketAddr, server: SocketAddr, payload: &[u8]) -> UdpPlan;
+}
+
 /// Relays the datagrams of one UDP flow (an app's local port talking to
 /// `server`) through a socket pinned to the uplink (calling `connected` once
 /// it is set up), until the app side ends (the stack closes flows idle for
-/// its UDP timeout).
+/// its UDP timeout). Before each datagram, `planner` may add decoys (sent
+/// first, from the same socket) or ask to hold it until the next one.
 ///
 /// The app side must return one datagram per read; an empty read ends the
 /// flow.
 ///
 /// # Errors
 /// If the socket cannot be set up or fails.
-pub(crate) async fn udp<A>(
+pub(crate) async fn udp<A, P>(
     mut app: A,
     server: SocketAddr,
     uplink: NonZeroU32,
+    planner: &P,
     connected: impl FnOnce(),
 ) -> Result<(), RelayError>
 where
     A: AsyncRead + AsyncWrite + Unpin,
+    P: Datagrams,
 {
     let socket = udp_socket(server, uplink).map_err(RelayError::UdpSocket)?;
+    let local = socket.local_addr().map_err(RelayError::UdpSocket)?;
     connected();
     let mut up = vec![0_u8; MAX_DATAGRAM];
     let mut down = vec![0_u8; MAX_DATAGRAM];
+    let mut held: Vec<Vec<u8>> = Vec::new();
+    let mut release_at: Option<tokio::time::Instant> = None;
     loop {
         tokio::select! {
             read = app.read(&mut up) => match read {
-                Ok(0) => return Ok(()),
+                Ok(0) => return send_all(&socket, &held, &[]).await,
                 Ok(n) => {
-                    socket.send(filled(&up, n)?).await.map_err(RelayError::UdpTransfer)?;
+                    let datagram = filled(&up, n)?;
+                    let plan = planner.datagram(local, server, datagram);
+                    if plan.hold {
+                        held.push(datagram.to_vec());
+                        if release_at.is_none() {
+                            release_at = tokio::time::Instant::now().checked_add(HOLD_WAIT);
+                        }
+                    } else {
+                        send_all(&socket, &plan.decoys, &held).await?;
+                        socket.send(datagram).await.map_err(RelayError::UdpTransfer)?;
+                        held.clear();
+                        release_at = None;
+                    }
                 }
-                Err(e) if e.kind() == io::ErrorKind::TimedOut => return Ok(()),
+                Err(e) if e.kind() == io::ErrorKind::TimedOut => {
+                    return send_all(&socket, &held, &[]).await;
+                }
                 Err(e) => return Err(RelayError::UdpTransfer(e)),
             },
+            // The rest of a held hello never came: send what was held.
+            () = tokio::time::sleep_until(release_at.unwrap_or_else(tokio::time::Instant::now)),
+                if release_at.is_some() => {
+                send_all(&socket, &held, &[]).await?;
+                held.clear();
+                release_at = None;
+            }
             received = socket.recv(&mut down) => match received {
                 Ok(n) => app.write_all(filled(&down, n)?).await.map_err(RelayError::UdpTransfer)?,
                 // A stray ICMP "port unreachable" for an earlier datagram:
@@ -230,6 +266,21 @@ where
             },
         }
     }
+}
+
+/// Sends `first`, then `then`, one datagram each.
+async fn send_all(
+    socket: &UdpSocket,
+    first: &[Vec<u8>],
+    then: &[Vec<u8>],
+) -> Result<(), RelayError> {
+    for datagram in first.iter().chain(then) {
+        socket
+            .send(datagram)
+            .await
+            .map_err(RelayError::UdpTransfer)?;
+    }
+    Ok(())
 }
 
 fn udp_socket(server: SocketAddr, uplink: NonZeroU32) -> io::Result<UdpSocket> {
@@ -288,7 +339,83 @@ mod tests {
 
     use jink_core::engine::stream::TcpStep;
 
-    use super::{FirstMessage, RelayError, send_steps, tcp, udp};
+    use jink_core::engine::stream::UdpPlan;
+
+    use super::{Datagrams, FirstMessage, RelayError, send_steps, tcp, udp};
+
+    /// No decoys, no holding.
+    struct Plain;
+
+    impl Datagrams for Plain {
+        fn datagram(&self, _: SocketAddr, _: SocketAddr, _: &[u8]) -> UdpPlan {
+            UdpPlan::default()
+        }
+    }
+
+    /// Holds datagrams starting with `h`; puts decoys `x`, `y` before
+    /// datagrams starting with `d`.
+    struct Scripted;
+
+    impl Datagrams for Scripted {
+        fn datagram(&self, local: SocketAddr, _: SocketAddr, payload: &[u8]) -> UdpPlan {
+            assert_ne!(local.port(), 0);
+            match payload.first() {
+                Some(b'h') => UdpPlan {
+                    decoys: Vec::new(),
+                    hold: true,
+                },
+                Some(b'd') => UdpPlan {
+                    decoys: vec![b"x".to_vec(), b"y".to_vec()],
+                    hold: false,
+                },
+                _ => UdpPlan::default(),
+            }
+        }
+    }
+
+    /// A UDP server that reports each datagram it receives.
+    async fn recording_server() -> (SocketAddr, tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>) {
+        let server = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let addr = server.local_addr().unwrap();
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        tokio::spawn(async move {
+            let mut buf = [0_u8; 64];
+            while let Ok(n) = server.recv(&mut buf).await {
+                if tx.send(buf[..n].to_vec()).is_err() {
+                    break;
+                }
+            }
+        });
+        (addr, rx)
+    }
+
+    /// Decoys go first, then the held datagram, then the one that completed
+    /// it; a held datagram whose sequel never comes goes out after the wait.
+    #[tokio::test]
+    async fn udp_decoys_and_holding() {
+        let (addr, mut received) = recording_server().await;
+        let (mut app, stack_side) = duplex(1024);
+        let relay =
+            tokio::spawn(async move { udp(stack_side, addr, lo0(), &Scripted, || ()).await });
+        let pause = std::time::Duration::from_millis(30);
+        app.write_all(b"h1").await.unwrap();
+        tokio::time::sleep(pause).await;
+        app.write_all(b"d2").await.unwrap();
+        tokio::time::sleep(pause).await;
+        app.write_all(b"plain").await.unwrap();
+        let mut got = Vec::new();
+        for _ in 0..5 {
+            got.push(received.recv().await.unwrap());
+        }
+        assert_eq!(got, [&b"x"[..], b"y", b"h1", b"d2", b"plain"]);
+
+        let started = std::time::Instant::now();
+        app.write_all(b"h-alone").await.unwrap();
+        assert_eq!(received.recv().await.unwrap(), b"h-alone");
+        assert!(started.elapsed() >= std::time::Duration::from_millis(400));
+        drop(app);
+        relay.await.unwrap().unwrap();
+    }
 
     /// Records every write, and every fake sent in between, in order.
     #[derive(Default, Clone)]
@@ -545,7 +672,7 @@ mod tests {
             }
         });
         let (mut app, stack_side) = duplex(1024);
-        let relay = tokio::spawn(udp(stack_side, addr, lo0(), || ()));
+        let relay = tokio::spawn(async move { udp(stack_side, addr, lo0(), &Plain, || ()).await });
         for datagram in [&b"first"[..], b"second datagram"] {
             app.write_all(datagram).await.unwrap();
             let mut echoed = vec![0_u8; datagram.len()];

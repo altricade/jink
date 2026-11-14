@@ -1,6 +1,6 @@
 //! Setting up (handshake capture, raw socket, utun interface, routes,
-//! userspace stack), relaying with desync until a signal arrives, and
-//! tearing down.
+//! userspace stack), relaying with desync (TCP fakes and split writes, UDP
+//! decoys) until a signal arrives, and tearing down.
 
 use std::io;
 use std::net::{IpAddr, SocketAddr};
@@ -86,6 +86,8 @@ pub struct Summary {
     pub udp_flows: u64,
     /// UDP flows whose socket could not be set up.
     pub udp_failed: u64,
+    /// UDP datagrams sent after decoys.
+    pub udp_decoyed: u64,
 }
 
 #[derive(Debug, Default)]
@@ -95,6 +97,7 @@ struct Counters {
     tcp_desynced: AtomicU64,
     udp_flows: AtomicU64,
     udp_failed: AtomicU64,
+    udp_decoyed: AtomicU64,
 }
 
 impl Counters {
@@ -105,6 +108,7 @@ impl Counters {
             tcp_desynced: self.tcp_desynced.load(Ordering::Relaxed),
             udp_flows: self.udp_flows.load(Ordering::Relaxed),
             udp_failed: self.udp_failed.load(Ordering::Relaxed),
+            udp_decoyed: self.udp_decoyed.load(Ordering::Relaxed),
         }
     }
 }
@@ -115,8 +119,9 @@ fn bump(counter: &AtomicU64) {
 
 type OnEvent = Arc<dyn Fn(Event) + Send + Sync>;
 
-/// Routes all IPv4 traffic through jink, desyncing TCP connections as
-/// `engine` plans, until SIGINT (Ctrl+C), SIGTERM or SIGHUP. Needs root.
+/// Routes all IPv4 traffic through jink, desyncing TCP connections and UDP
+/// flows as `engine` plans, until SIGINT (Ctrl+C), SIGTERM or SIGHUP. Needs
+/// root.
 ///
 /// # Errors
 /// If setting up fails (nothing is left changed), or the stack stops.
@@ -149,6 +154,7 @@ async fn serve(engine: StreamEngine, on_event: OnEvent) -> Result<Summary, RunEr
             raw,
             move |server, outcome| match outcome {
                 Outcome::Desynced => bump(&counters.tcp_desynced),
+                Outcome::Decoys => bump(&counters.udp_decoyed),
                 Outcome::Unchanged => {}
                 Outcome::Failed(error) => on_event(Event::Desync { server, error }),
             },
@@ -237,7 +243,10 @@ fn dispatch(
                 .await
             }
             IpStackStream::Udp(udp) => {
-                relay::udp(udp, server, uplink, || bump(&counters.udp_flows)).await
+                relay::udp(udp, server, uplink, &*desyncer, || {
+                    bump(&counters.udp_flows);
+                })
+                .await
             }
             IpStackStream::UnknownTransport(_) | IpStackStream::UnknownNetwork(_) => Ok(()),
         };

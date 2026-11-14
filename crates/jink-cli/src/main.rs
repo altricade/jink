@@ -3,7 +3,7 @@
 //! - `jink check <strategy.bat>` (any OS) shows what jink will do with it.
 //! - `jink run <strategy.bat>` runs it: on Windows (as Administrator) with
 //!   WinDivert, `WinDivert64.sys` next to `jink.exe`; on macOS (with sudo)
-//!   through a utun interface (TCP desync; UDP decoys not yet).
+//!   through a utun interface.
 
 #[cfg(any(windows, target_os = "macos", test))]
 mod entropy;
@@ -171,8 +171,7 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
                 let _ = writeln!(
                     std::io::stdout().lock(),
                     "jink: all IPv4 traffic now goes through {tun} and leaves through {uplink}.\n\
-                     jink: TCP desync is active ({skipped} rules pass traffic unchanged); \
-                     UDP decoys are not sent yet.\n\
+                     jink: desync is active ({skipped} rules pass traffic unchanged).\n\
                      jink: press Ctrl+C to stop."
                 );
                 return;
@@ -197,11 +196,12 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     writeln!(
         std::io::stdout().lock(),
         "jink: stopped; routes restored. TCP: {} connected ({} desynced), {} failed. \
-         UDP: {} flows, {} failed.",
+         UDP: {} flows ({} datagrams after decoys), {} failed.",
         summary.tcp_connected,
         summary.tcp_desynced,
         summary.tcp_failed,
         summary.udp_flows,
+        summary.udp_decoyed,
         summary.udp_failed
     )?;
     Ok(())
