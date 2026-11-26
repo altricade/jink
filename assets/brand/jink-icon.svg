@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- jink app icon (macOS grid: an 824 px body inside 1024, with its shadow). -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15253C"/>
+      <stop offset="1" stop-color="#0B1524"/>
+    </linearGradient>
+  </defs>
+  <rect x="96" y="110" width="832" height="832" rx="189" fill="#000000" opacity="0.07"/>
+  <rect x="100" y="106" width="824" height="824" rx="185" fill="#000000" opacity="0.14"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#body)"/>
+  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#FFFFFF" stroke-opacity="0.07" stroke-width="2"/>
+  <g transform="translate(213 200) scale(26)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 12.4V18.6" stroke="#3B4E6E" stroke-width="2.4"/>
+    <path d="M3.5 15.5H8L11 8H19.5" stroke="#34E3A5" stroke-width="2.2"/>
+    <path d="M16.8 5.3L19.5 8L16.8 10.7" stroke="#34E3A5" stroke-width="2.2"/>
+  </g>
+</svg>

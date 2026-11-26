@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="456" height="200" viewBox="0 0 228 100">
+  <!-- jink logo: the icon and the drawn name, whose i dot jinks out of line. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15253C"/>
+      <stop offset="1" stop-color="#0B1524"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 10) scale(0.8)">
+    <rect width="100" height="100" rx="22.5" fill="url(#body)"/>
+    <g transform="translate(15.5 14) scale(3)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 12.4V18.6" stroke="#3B4E6E" stroke-width="2.4"/>
+      <path d="M3.5 15.5H8L11 8H19.5" stroke="#34E3A5" stroke-width="2.2"/>
+      <path d="M16.8 5.3L19.5 8L16.8 10.7" stroke="#34E3A5" stroke-width="2.2"/>
+    </g>
+  </g>
+  <g transform="translate(104.6 14.6) scale(1.15)">
+    <g fill="none" stroke="#F3F6FA" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 20V51L2 61"/>
+      <path d="M28 20V48"/>
+      <path d="M44 48V31Q44 20 54 20Q64 20 64 31V48"/>
+      <path d="M80 2V48"/>
+      <path d="M96 20L83 34L96 48"/>
+    </g>
+    <circle cx="10" cy="5" r="4.8" fill="#F3F6FA"/>
+    <circle cx="35" cy="1" r="4.8" fill="#34E3A5"/>
+  </g>
+</svg>

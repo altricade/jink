@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- jink mark, edge to edge: avatars (any crop) and small icons. -->
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#15253C"/>
+      <stop offset="1" stop-color="#0B1524"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#body)"/>
+  <g transform="translate(72 64) scale(16)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 12.4V18.6" stroke="#3B4E6E" stroke-width="2.4"/>
+    <path d="M3.5 15.5H8L11 8H19.5" stroke="#34E3A5" stroke-width="2.2"/>
+    <path d="M16.8 5.3L19.5 8L16.8 10.7" stroke="#34E3A5" stroke-width="2.2"/>
+  </g>
+</svg>

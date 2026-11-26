@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/jink-banner.svg" alt="jink: unblocks YouTube and Discord on macOS and Windows" width="100%">
+</p>
+
 # jink
 
 A cross-platform DPI-desync engine in Rust, built by studying zapret
