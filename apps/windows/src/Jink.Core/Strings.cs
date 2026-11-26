@@ -298,4 +298,10 @@ public static class Strings
 
     /// <summary>"not a port or range (like 1024-65535)"</summary>
     public static string EntryInvalidPorts => Get(nameof(EntryInvalidPorts));
+
+    /// <summary>"Turn on"</summary>
+    public static string TurnOn => Get(nameof(TurnOn));
+
+    /// <summary>"Turn off"</summary>
+    public static string TurnOff => Get(nameof(TurnOff));
 }

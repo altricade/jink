@@ -54,4 +54,24 @@ for state in off busy on trouble; do
 }
 JSON
 done
-echo "made: assets/brand/png, the app icon set, the menu-bar icons"
+# Windows: the app icon, and the tray icons for a dark taskbar (white) and a
+# light one (black), at every size Windows asks for from 100 % to 300 %.
+assets="$root/apps/windows/src/Jink.App/Assets"
+mkdir -p "$assets" "$work/ico"
+ico() {
+  local svg="$1" out="$2"; shift 2
+  local pngs=()
+  for size in "$@"; do
+    "$work/render" "$svg" "$work/ico/$size.png" "$size" "$size"
+    pngs+=("$work/ico/$size.png")
+  done
+  python3 "$here/make-ico.py" "$out" "${pngs[@]}"
+  rm -f "$work/ico/"*.png
+}
+ico "$here/jink-icon.svg" "$assets/jink.ico" 16 20 24 32 40 48 64 256
+for state in off busy on trouble; do
+  ico "$here/menubar-$state.svg" "$assets/tray-$state-light.ico" 16 20 24 32 40 48
+  sed 's/#000000/#FFFFFF/g' "$here/menubar-$state.svg" > "$work/white.svg"
+  ico "$work/white.svg" "$assets/tray-$state-dark.ico" 16 20 24 32 40 48
+done
+echo "made: assets/brand/png, the app icon set, the menu-bar icons, the Windows icons"

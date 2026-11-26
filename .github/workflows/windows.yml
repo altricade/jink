@@ -2,7 +2,8 @@
 # release build that is installed as a service and used
 # (scripts/windows-smoke.ps1); the built jink.exe with its WinDivert driver
 # is kept as the "jink-windows" artifact of each run. "app": the Windows
-# app's gate (apps/windows/check.sh).
+# app's gate (apps/windows/check.sh), then the app itself as the
+# "jink-windows-app" artifact.
 name: windows
 
 on:
@@ -54,6 +55,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: apps/windows/global.json
-      - name: Format, build and test the app's core
+      - name: Format, build and test
         shell: bash
         run: apps/windows/check.sh
+      - name: Publish the app (with .NET and the Windows App SDK in it)
+        run: dotnet publish apps/windows/src/Jink.App -c Release -o dist-app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jink-windows-app
+          path: dist-app/
+          if-no-files-found: error

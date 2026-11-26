@@ -9,6 +9,9 @@ using Jink.Protocol;
 
 namespace Jink.Tests;
 
+// Tests that change the app-wide language (Strings.Culture) are in one
+// collection, so they run one at a time.
+[Collection("Language")]
 public sealed partial class CoreTests
 {
     private static readonly Settings Saved = new(
@@ -122,4 +125,61 @@ public sealed partial class CoreTests
 
     [GeneratedRegex(@"\{\d+\}")]
     private static partial Regex Placeholder();
+}
+
+[Collection("Language")]
+public sealed class DescribeTests
+{
+    private static string Name(string id) => id.ToUpperInvariant();
+
+    [Fact]
+    public void TheStatusLineSaysWhatTheEngineDoes()
+    {
+        var before = Strings.Culture;
+        try
+        {
+            Strings.Culture = System.Globalization.CultureInfo.GetCultureInfo("en");
+            Assert.Equal("On", Describe.Engine(new Engine.On(new Network.Active()), Name));
+            Assert.Equal("On, via en0", Describe.Engine(new Engine.On(new Network.Online("en0", false)), Name));
+            Assert.Equal(
+                "Stopped: A file jink needs (WinDivert64.sys) is missing: reinstall jink.",
+                Describe.Engine(new Engine.Failed(new Problem("missing_driver", "x")), Name));
+            Assert.Equal("Finding a strategy: trying ALT4", Describe.Engine(new Engine.Finding(2, 14, "alt4"), Name));
+            Assert.Equal("Finding a strategy…", Describe.Engine(new Engine.Finding(1, 14, null), Name));
+            Assert.Equal("ALT", Describe.Strategy(new StrategyInfo("alt", "ALT", null, Support.Full)));
+            Assert.Equal("general (partly)", Describe.Strategy(new StrategyInfo("general", "general", null, Support.Partial)));
+        }
+        finally
+        {
+            Strings.Culture = before;
+        }
+    }
+
+    [Fact]
+    public void WhatFindingFoundIsSummed()
+    {
+        var before = Strings.Culture;
+        try
+        {
+            Strings.Culture = System.Globalization.CultureInfo.GetCultureInfo("en");
+            var without = new Checks(4, Items.Of(new FailedCheck("i.ytimg.com", Tls.V13, Outcome.Cut)));
+            var found = new Found(
+                new FindResult.Kept("alt4"),
+                16,
+                without,
+                Items.Of(new Tried("alt4", new Checks(15, Items.Of<FailedCheck>()), null)));
+            Assert.Equal("Kept ALT4: 15 of 16 checks passed (4 without jink).", Describe.Found(found, Name));
+            Assert.Equal(
+                "No strategy did better than without jink.",
+                Describe.Found(found with { Result = new FindResult.NoneHelped() }, Name));
+            Assert.Equal(("4/16", "i.ytimg.com TLS 1.3: connection cut"), Describe.Round(without, 16, null));
+            Assert.Equal(
+                "It did not get online in time.",
+                Describe.Round(without, 16, new Problem("not_online", "x")).Result);
+        }
+        finally
+        {
+            Strings.Culture = before;
+        }
+    }
 }

@@ -1,0 +1,43 @@
+<!-- The Windows app: the tray icon, its window and the settings window,
+     over Jink.Core. Built with WinUI 3 (Windows App SDK, carried along so
+     nothing else needs installing); its UI is made in C#, not XAML, so it
+     also compiles (and is analyzed) on macOS, where the XAML compiler does
+     not run. Only Windows packs it into a runnable app. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <!-- Windows 10 version 1809 and later. -->
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Jink.App</RootNamespace>
+    <AssemblyName>jink-app</AssemblyName>
+    <UseWinUI>true</UseWinUI>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <WindowsPackageType>None</WindowsPackageType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationIcon>Assets\jink.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Main is ours (Program.cs): there is no App.xaml to make one. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+  <!-- Windows: carry the Windows App SDK and .NET along. -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform(Windows))">
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+  <!-- Elsewhere: compile and analyze only; the resource index and the
+       manifest are made by Windows tools. -->
+  <PropertyGroup Condition="!$([MSBuild]::IsOSPlatform(Windows))">
+    <AppxGeneratePriEnabled>false</AppxGeneratePriEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="H.NotifyIcon.WinUI" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Jink.Core\Jink.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\*.ico" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

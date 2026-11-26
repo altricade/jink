@@ -97,4 +97,6 @@
   <data name="EntryInvalidSite" xml:space="preserve"><value>not a site name</value></data>
   <data name="EntryInvalidIp" xml:space="preserve"><value>not an IP address or network</value></data>
   <data name="EntryInvalidPorts" xml:space="preserve"><value>not a port or range (like 1024-65535)</value></data>
+  <data name="TurnOn" xml:space="preserve"><value>Turn on</value></data>
+  <data name="TurnOff" xml:space="preserve"><value>Turn off</value></data>
 </root>
