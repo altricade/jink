@@ -21,6 +21,9 @@ jobs:
     env:
       # Compile WinDivert's user-mode library into jink.exe.
       WINDIVERT_STATIC: "1"
+      # Line tables in jink.pdb, for the debugger if a step crashes (the
+      # artifact does not carry the .pdb).
+      CARGO_PROFILE_RELEASE_DEBUG: line-tables-only
       CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +45,17 @@ jobs:
       - name: Smoke test (service, pipe, capture)
         shell: pwsh
         run: scripts/windows-smoke.ps1 -Dist dist
+      - name: If it crashed, where (the debugger's call stack)
+        if: failure()
+        shell: pwsh
+        run: |
+          Copy-Item target/release/jink.pdb dist/
+          $cdb = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\cdb.exe" | Select-Object -First 1
+          foreach ($command in @('--version', 'service status', 'service install')) {
+            Write-Host "=== jink $command"
+            & $cdb.FullName -g -G -y dist -c "sxe sov; g; .ecxr; kn 60; q" dist/jink.exe $command.Split(' ')
+          }
+          & dist/jink.exe service uninstall
       - uses: actions/upload-artifact@v4
         with:
           name: jink-windows

@@ -27,6 +27,8 @@ function Await-Status([string]$pattern, [int]$seconds) {
 }
 
 try {
+    Jink --version | Out-Null
+    Jink service status | Out-Null
     Jink service install | Out-Null
     Await-Status '"state": "off"' 20 | Out-Null
     Jink ctl strategies | Out-Null
