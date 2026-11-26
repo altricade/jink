@@ -43,7 +43,11 @@
   <!-- The Windows App SDK adds source files of its own to the app (they set
        up its runtime). They are Microsoft's, not jink's: analyzers skip
        them, through a config naming exactly those files, made at build
-       time because their path is on this machine's package folder. -->
+       time because their path is on this machine's package folder. Rules
+       that AnalysisLevel sets one by one outrank "all rules"; the one these
+       files trip (CA5392, on the SDK's P/Invoke) is named. Check:
+       dotnet build -p:WindowsAppSdkUndockedRegFreeWinRTInitialize=true
+       compiles the file that trips it, on any OS. -->
   <Target Name="SkipAnalyzingPackageSources" BeforeTargets="CoreCompile" AfterTargets="GenerateUndockedRegFreeWinRTCS">
     <ItemGroup>
       <_PackageSource Include="@(Compile->'%(FullPath)')" Condition="$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(NuGetPackageRoot)', StringComparison.OrdinalIgnoreCase))" />
@@ -51,9 +55,9 @@
         <ConfigPath>$([System.String]::Copy('%(FullPath)').Replace('\', '/'))</ConfigPath>
       </_PackageSource>
     </ItemGroup>
-    <WriteLinesToFile File="$(IntermediateOutputPath)package-sources.globalconfig" Lines="is_global = true;@(_PackageSource->'[%(ConfigPath)]%0Adotnet_analyzer_diagnostic.severity = none')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)package-sources.globalconfig" Lines="is_global = true;@(_PackageSource->'[%(ConfigPath)]%0Adotnet_analyzer_diagnostic.severity = none%0Adotnet_diagnostic.CA5392.severity = none')" Overwrite="true" WriteOnlyWhenDifferent="true" />
     <ItemGroup>
-      <GlobalAnalyzerConfigFiles Include="$(IntermediateOutputPath)package-sources.globalconfig" />
+      <EditorConfigFiles Include="$(IntermediateOutputPath)package-sources.globalconfig" />
     </ItemGroup>
   </Target>
 </Project>
