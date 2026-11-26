@@ -53,7 +53,7 @@ jobs:
           $cdb = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\cdb.exe" | Select-Object -First 1
           foreach ($command in @('--version', 'service status', 'service install')) {
             Write-Host "=== jink $command"
-            & $cdb.FullName -g -G -y dist -c "sxe sov; g; .ecxr; kn 60; q" dist/jink.exe $command.Split(' ')
+            & $cdb.FullName -G -y dist -c "sxe sov; g; .ecxr; kn 60; q" dist/jink.exe $command.Split(' ')
           }
           & dist/jink.exe service uninstall
       - uses: actions/upload-artifact@v4
