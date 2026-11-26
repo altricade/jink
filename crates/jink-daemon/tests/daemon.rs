@@ -352,6 +352,8 @@ async fn start_runs_and_follows_the_network() -> Result<()> {
     .await?;
     daemon.fake.report(0, BackendEvent::Offline)?;
     until(&daemon.handle, |s| s.engine == on(Network::Offline)).await?;
+    daemon.fake.report(0, BackendEvent::Active)?;
+    until(&daemon.handle, |s| s.engine == on(Network::Active)).await?;
     // The choice is saved.
     assert_eq!(
         Saved::load(&daemon.saved_at)?.map(|s| s.strategy),
@@ -816,6 +818,18 @@ async fn strategies_that_never_come_online_are_not_checked() -> Result<()> {
     daemon.fake.answer(Answer::Nothing);
     assert_eq!(problems(&find(&daemon).await?.0), every("not_online"));
     assert_eq!(daemon.fake.live(), 0);
+    Ok(())
+}
+
+#[tokio::test]
+async fn finding_counts_working_on_every_network_as_online() -> Result<()> {
+    let daemon = start(scratch("find-active")?);
+    daemon.fake.answer(Answer::Report(BackendEvent::Active));
+    daemon.sites.set(None, 4, Outcome::Cut)?;
+    daemon.sites.set(Some("alt4"), 16, Outcome::Cut)?;
+    let (found, _) = find(&daemon).await?;
+    assert_eq!(found.result, kept("alt4"));
+    assert!(found.tried.iter().all(|t| t.problem.is_none()));
     Ok(())
 }
 

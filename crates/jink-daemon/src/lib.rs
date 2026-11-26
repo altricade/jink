@@ -2,7 +2,9 @@
 //! ([`daemon`]), the control channel's messages ([`protocol`]) and
 //! connections ([`server`]), what it keeps between runs ([`saved`]), and the
 //! finder's host checks ([`probe`]).
-//! On macOS, [`run`] runs it with the macOS engine.
+//! [`run`] runs it with this system's engine: on macOS as a launchd daemon
+//! (see `jink_macos::service`), on Windows as a Windows service
+//! ([`service`]).
 
 pub mod daemon;
 pub mod entropy;
@@ -19,3 +21,13 @@ mod run;
 
 #[cfg(target_os = "macos")]
 pub use run::{DaemonError, SOCKET, run};
+
+#[cfg(windows)]
+pub mod service;
+#[cfg(windows)]
+mod windows;
+#[cfg(windows)]
+mod windows_run;
+
+#[cfg(windows)]
+pub use windows_run::{DaemonError, PIPE, SERVICE, home, run};

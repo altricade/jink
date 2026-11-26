@@ -100,7 +100,7 @@ public final class AppModel {
         switch status?.engine {
         case nil, .off: .off
         case .starting, .finding, .on(.checking): .busy
-        case .on(.online): .on
+        case .on(.online), .on(.active): .on
         case .on(.offline), .on(.bypassed), .failed: .trouble
         }
     }

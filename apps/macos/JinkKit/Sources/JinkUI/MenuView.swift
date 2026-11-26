@@ -143,6 +143,7 @@ private struct StatusLine: View {
             case .starting: Text("Starting…", bundle: .module)
             case .on(.checking): Text("On, checking the network…", bundle: .module)
             case .on(.online(let uplink, _)): Text("On, via \(uplink)", bundle: .module)
+            case .on(.active): Text("On", bundle: .module)
             case .on(.offline): Text("On, waiting for a network", bundle: .module)
             case .on(.bypassed(let problem)): Text("On, but not working: \(explain(problem))", bundle: .module)
             case .failed(let problem): Text("Stopped: \(explain(problem))", bundle: .module)

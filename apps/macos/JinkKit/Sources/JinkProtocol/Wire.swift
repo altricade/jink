@@ -107,7 +107,7 @@ extension Network: Decodable {
     }
 
     private enum State: String, Decodable {
-        case checking, online, offline, bypassed
+        case checking, online, active, offline, bypassed
     }
 
     public init(from decoder: any Decoder) throws {
@@ -119,6 +119,7 @@ extension Network: Decodable {
                 uplink: try fields.decode(String.self, forKey: .uplink),
                 ipv6: try fields.decode(Bool.self, forKey: .ipv6)
             )
+        case .active: self = .active
         case .offline: self = .offline
         case .bypassed: self = .bypassed(try fields.decode(Problem.self, forKey: .problem))
         }

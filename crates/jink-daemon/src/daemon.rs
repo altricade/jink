@@ -33,6 +33,8 @@ pub enum BackendEvent {
         uplink: String,
         ipv6: bool,
     },
+    /// Working on every network (Windows).
+    Active,
     Offline,
     /// Cannot work on this network; traffic bypasses it.
     Bypassed(Problem),
@@ -587,6 +589,7 @@ impl<B: Backend, P: Probe> State<B, P> {
             EngineInput::Event(BackendEvent::Online { uplink, ipv6 }) => {
                 self.set_engine(network(Network::Online { uplink, ipv6 }));
             }
+            EngineInput::Event(BackendEvent::Active) => self.set_engine(network(Network::Active)),
             EngineInput::Event(BackendEvent::Offline) => self.set_engine(network(Network::Offline)),
             EngineInput::Event(BackendEvent::Bypassed(problem)) => {
                 self.set_engine(network(Network::Bypassed { problem }));
@@ -652,6 +655,7 @@ fn describe(engine: &Engine) -> String {
                     if *ipv6 { " (IPv6 turned away)" } else { "" }
                 )
             }
+            Network::Active => "on, on every network".to_owned(),
             Network::Offline => "on, no network".to_owned(),
             Network::Bypassed { problem } => {
                 format!("on but bypassed: {} ({})", problem.code, problem.detail)

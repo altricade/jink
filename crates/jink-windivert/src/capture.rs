@@ -2,10 +2,13 @@
 //!
 //! For each captured packet: run it through the engine, send the forged and
 //! replayed packets on the interface it came from, then reinject the original
-//! if the verdict is [`Verdict::Pass`]. Closing the process (Ctrl+C) closes
-//! the WinDivert handle, and traffic flows normally again.
+//! if the verdict is [`Verdict::Pass`]. When the loop ends (asked to with
+//! [`Stop`], or the process ends), the WinDivert handle closes and traffic
+//! flows normally again.
 
 use std::borrow::Cow;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use jink_core::desync::{PlanError, Verdict};
@@ -17,6 +20,10 @@ use windivert::layer::NetworkLayer;
 use windivert::packet::WinDivertPacket;
 use windivert::prelude::WinDivertFlags;
 
+/// How long one wait for a packet lasts: how quickly the loop notices
+/// [`Stop`], and how often held packets are checked for expiry when the
+/// network is quiet.
+const WAIT_MS: u32 = 100;
 /// How often held packets are checked for expiry.
 const EXPIRY_CHECK: Duration = Duration::from_millis(100);
 /// Largest IP packet WinDivert can deliver.
@@ -34,16 +41,39 @@ pub enum RunError {
     Recv(WinDivertError),
 }
 
-/// Something worth logging while running.
+/// Something worth knowing while running.
 #[derive(Debug)]
 pub enum Event {
+    /// WinDivert is open: traffic goes through jink from now on.
+    Capturing,
     /// A rule could not be applied; the packet went out unchanged.
     PlanFailed(PlanError),
     /// WinDivert refused to send a packet.
     SendFailed(String),
 }
 
-/// Captures with `filter` and processes packets until an error occurs.
+/// Asks a running [`run`] to end; clones share the request.
+#[derive(Debug, Clone, Default)]
+pub struct Stop(Arc<AtomicBool>);
+
+impl Stop {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `run` ends within [`WAIT_MS`] (after the packet in hand, if any).
+    pub fn stop(&self) {
+        self.0.store(true, Ordering::Relaxed);
+    }
+
+    fn asked(&self) -> bool {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
+/// Captures with `filter` and processes packets until `stop` asks it to end
+/// (then `Ok`) or an error occurs.
 ///
 /// # Errors
 /// [`RunError`] if WinDivert cannot be opened or receiving fails.
@@ -51,58 +81,89 @@ pub fn run(
     engine: &mut PacketEngine,
     filter: &str,
     on_event: &mut dyn FnMut(Event),
+    stop: &Stop,
 ) -> Result<(), RunError> {
     let divert = WinDivert::network(filter, 0, WinDivertFlags::new()).map_err(|e| match e {
         WinDivertError::Open(WinDivertOpenError::MissingSYS) => RunError::MissingDriver,
         WinDivertError::Open(WinDivertOpenError::AccessDenied) => RunError::AccessDenied,
         other => RunError::Open(other),
     })?;
+    on_event(Event::Capturing);
     let mut buffer = vec![0_u8; BUFFER_LEN];
     // The latest outbound address: a template for sending released packets.
     let mut template: Option<WinDivertAddress<NetworkLayer>> = None;
     let mut last_expiry = Instant::now();
-    loop {
-        let packet = match divert.recv(Some(&mut buffer)) {
-            Ok(p) => p,
-            Err(WinDivertError::Recv(WinDivertRecvError::InsufficientBuffer)) => continue,
-            Err(e) => return Err(RunError::Recv(e)),
-        };
-        let now = Instant::now();
-        let address = packet.address.clone();
-        let direction = if address.outbound() {
-            Direction::Outbound
-        } else {
-            Direction::Inbound
-        };
-        let out = engine.process(&packet.data, direction, interface_tag(&address), now);
-        out.errors
-            .into_iter()
-            .for_each(|e| on_event(Event::PlanFailed(e)));
-        for bytes in out.send {
-            send(&divert, forged_address(&address), bytes, on_event);
-        }
-        if out.original == Verdict::Pass
-            && let Err(e) = divert.send(&packet)
-        {
-            on_event(Event::SendFailed(e.to_string()));
-        }
-        if address.outbound() {
-            template = Some(address);
-        }
-        if now.saturating_duration_since(last_expiry) >= EXPIRY_CHECK {
-            last_expiry = now;
-            let released = engine.expire_holds(now);
-            released
-                .errors
-                .into_iter()
-                .for_each(|e| on_event(Event::PlanFailed(e)));
-            if let Some(template) = &template {
-                for p in released.packets {
-                    let mut address = forged_address(template);
-                    set_interface(&mut address, p.tag);
-                    send(&divert, address, p.bytes, on_event);
+    while !stop.asked() {
+        match divert.recv_wait(&mut buffer, WAIT_MS) {
+            Ok(Some(packet)) => {
+                if let Some(outbound) = process(&divert, engine, &packet, on_event) {
+                    template = Some(outbound);
                 }
             }
+            // Nothing within the wait.
+            Ok(None) | Err(WinDivertError::Recv(WinDivertRecvError::InsufficientBuffer)) => {}
+            Err(e) => return Err(RunError::Recv(e)),
+        }
+        let now = Instant::now();
+        if now.saturating_duration_since(last_expiry) >= EXPIRY_CHECK {
+            last_expiry = now;
+            release(&divert, engine, template.as_ref(), now, on_event);
+        }
+    }
+    Ok(())
+}
+
+/// Runs one captured packet through the engine; its address if outbound.
+fn process(
+    divert: &WinDivert<NetworkLayer>,
+    engine: &mut PacketEngine,
+    packet: &WinDivertPacket<'_, NetworkLayer>,
+    on_event: &mut dyn FnMut(Event),
+) -> Option<WinDivertAddress<NetworkLayer>> {
+    let address = &packet.address;
+    let direction = if address.outbound() {
+        Direction::Outbound
+    } else {
+        Direction::Inbound
+    };
+    let out = engine.process(
+        &packet.data,
+        direction,
+        interface_tag(address),
+        Instant::now(),
+    );
+    out.errors
+        .into_iter()
+        .for_each(|e| on_event(Event::PlanFailed(e)));
+    for bytes in out.send {
+        send(divert, forged_address(address), bytes, on_event);
+    }
+    if out.original == Verdict::Pass
+        && let Err(e) = divert.send(packet)
+    {
+        on_event(Event::SendFailed(e.to_string()));
+    }
+    address.outbound().then(|| address.clone())
+}
+
+/// Sends the held packets whose time is up.
+fn release(
+    divert: &WinDivert<NetworkLayer>,
+    engine: &mut PacketEngine,
+    template: Option<&WinDivertAddress<NetworkLayer>>,
+    now: Instant,
+    on_event: &mut dyn FnMut(Event),
+) {
+    let released = engine.expire_holds(now);
+    released
+        .errors
+        .into_iter()
+        .for_each(|e| on_event(Event::PlanFailed(e)));
+    if let Some(template) = template {
+        for p in released.packets {
+            let mut address = forged_address(template);
+            set_interface(&mut address, p.tag);
+            send(divert, address, p.bytes, on_event);
         }
     }
 }

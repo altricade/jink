@@ -2,7 +2,6 @@
 //! people who prefer it to the app. It prints the daemon's JSON replies.
 
 use std::io::{BufRead, BufReader, Write};
-use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 
 use clap::{Subcommand, ValueEnum};
@@ -24,7 +23,7 @@ pub(crate) enum Ctl {
     Settings,
     /// Replace the settings with those in a JSON file (as `settings` shows).
     SetSettings { file: PathBuf },
-    /// Whether desync starts by itself when the Mac starts.
+    /// Whether desync starts by itself when the computer starts.
     Boot { state: OnOff },
     /// Try every strategy and keep the one that gets through best (about
     /// two minutes; `watch` shows the progress, `status` the result).
@@ -61,7 +60,7 @@ pub(crate) fn run(command: &Ctl) -> Result<(), CliError> {
         Ctl::CancelFind => json!({"cmd": "cancel_find"}),
         Ctl::Watch => json!({"cmd": "watch"}),
     };
-    let mut stream = UnixStream::connect(jink_daemon::SOCKET).map_err(CliError::NoDaemon)?;
+    let mut stream = connect().map_err(CliError::NoDaemon)?;
     let mut line = serde_json::to_vec(&request).map_err(|e| CliError::Json(e.to_string()))?;
     line.push(b'\n');
     stream.write_all(&line)?;
@@ -82,4 +81,22 @@ pub(crate) fn run(command: &Ctl) -> Result<(), CliError> {
         }
     }
     Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn connect() -> std::io::Result<std::os::unix::net::UnixStream> {
+    std::os::unix::net::UnixStream::connect(jink_daemon::SOCKET)
+}
+
+/// The pipe, opened for reading and writing its data only: the daemon lets
+/// users do no more (see `jink_daemon::PIPE`).
+#[cfg(windows)]
+fn connect() -> std::io::Result<std::fs::File> {
+    use std::os::windows::fs::OpenOptionsExt;
+
+    /// `FILE_GENERIC_READ | FILE_WRITE_DATA | FILE_WRITE_EA | FILE_WRITE_ATTRIBUTES`.
+    const ACCESS: u32 = 0x0012_019b;
+    std::fs::OpenOptions::new()
+        .access_mode(ACCESS)
+        .open(jink_daemon::PIPE)
 }

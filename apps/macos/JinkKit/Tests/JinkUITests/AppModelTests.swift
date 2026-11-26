@@ -199,6 +199,7 @@ private func following(_ link: FakeLink) -> (AppModel, Task<Void, Never>) {
         (.starting, .busy, true, false),
         (.on(.checking), .busy, true, false),
         (.on(.online(uplink: "en0", ipv6: false)), .on, true, false),
+        (.on(.active), .on, true, false),
         (.on(.offline), .trouble, true, false),
         (.on(.bypassed(problem)), .trouble, true, false),
         (.failed(problem), .trouble, false, false),

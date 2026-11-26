@@ -53,6 +53,8 @@ public enum Network: Sendable, Equatable {
     /// Traffic goes through jink and leaves through `uplink`; with `ipv6`,
     /// the network has IPv6, turned away so that apps use IPv4.
     case online(uplink: String, ipv6: Bool)
+    /// Traffic on every network goes through jink (Windows only).
+    case active
     /// No network; jink waits for one.
     case offline
     /// jink cannot work on this network, so traffic goes around it.

@@ -10,10 +10,14 @@ publish.workspace = true
 jink-core = { path = "../jink-core" }
 thiserror.workspace = true
 
-# WinDivert 2.2.2 (LGPL-3.0-or-later). Build with WINDIVERT_STATIC=1 to compile
-# it into the executable; WinDivert64.sys must sit next to the executable.
+# WinDivert 2.2 (LGPL-3.0-or-later). Build on Windows with WINDIVERT_STATIC=1
+# to compile the crate's own copy into the executable (scripts/ and CI do);
+# WinDivert64.sys (same version) must sit next to it. From a Mac, lint with
+# WINDIVERT_PATH set to any folder instead (the README shows how). 0.7 (a
+# beta, pinned) is the first to receive with a time limit, which lets the
+# capture loop stop when asked and release held packets on a quiet network.
 [target.'cfg(windows)'.dependencies]
-windivert = "0.6"
+windivert = "=0.7.0-beta.4"
 
 [lints]
 workspace = true

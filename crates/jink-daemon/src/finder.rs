@@ -145,7 +145,7 @@ async fn online(reports: &mut mpsc::UnboundedReceiver<BackendEvent>) -> Result<(
     let wait = async {
         while let Some(event) = reports.recv().await {
             match event {
-                BackendEvent::Online { .. } => return Ok(()),
+                BackendEvent::Online { .. } | BackendEvent::Active => return Ok(()),
                 BackendEvent::Offline => return Err(Problem::new("offline", &"no network")),
                 BackendEvent::Bypassed(problem) => return Err(problem),
                 BackendEvent::Started | BackendEvent::Notice(_) => {}

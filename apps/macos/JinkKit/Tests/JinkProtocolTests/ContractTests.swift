@@ -43,6 +43,7 @@ private let settings = Settings(
 private let messages: [String: Message] = [
     "status-online": status(.on(.online(uplink: "en0", ipv6: true)), "alt", startAtBoot: true),
     "status-checking": status(.on(.checking), "alt"),
+    "status-active": status(.on(.active), "alt"),
     "status-offline": status(.on(.offline), "alt"),
     "status-bypassed": status(
         .on(.bypassed(Problem(code: "routes_taken", detail: "another app (a VPN?) has the default routes"))),

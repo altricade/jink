@@ -4,16 +4,18 @@
 //! - `jink run <strategy.bat>` runs it: on Windows (as Administrator) with
 //!   WinDivert, `WinDivert64.sys` next to `jink.exe`; on macOS (with sudo)
 //!   through a utun interface.
-//! - `jink daemon` (macOS) is the background service the apps control;
+//! - `jink daemon` is the background service the apps control;
 //!   `jink service install|uninstall|status` sets it up to run at every
 //!   startup, and `jink ctl` controls it from the terminal.
 
-#[cfg(target_os = "macos")]
+#[cfg(any(windows, target_os = "macos"))]
 mod ctl;
 mod report;
 #[cfg(target_os = "macos")]
 mod service;
 mod strategy;
+#[cfg(windows)]
+mod winservice;
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -48,31 +50,31 @@ enum Command {
         #[arg(long)]
         allow_partial: bool,
     },
-    /// Run the jink daemon (with sudo), which the apps and `jink ctl`
-    /// control; normally the service runs it.
-    #[cfg(target_os = "macos")]
+    /// Run the jink daemon (macOS: with sudo; Windows: as Administrator),
+    /// which the apps and `jink ctl` control; normally the service runs it.
+    #[cfg(any(windows, target_os = "macos"))]
     Daemon,
     /// Install the daemon as a service, running at every startup.
-    #[cfg(target_os = "macos")]
+    #[cfg(any(windows, target_os = "macos"))]
     Service {
         #[command(subcommand)]
         action: ServiceAction,
     },
     /// Control the daemon: start, stop, strategies, settings.
-    #[cfg(target_os = "macos")]
+    #[cfg(any(windows, target_os = "macos"))]
     Ctl {
         #[command(subcommand)]
         command: ctl::Ctl,
     },
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(windows, target_os = "macos"))]
 #[derive(Debug, Subcommand)]
 enum ServiceAction {
-    /// Install the service and start its daemon (with sudo); a new version
-    /// of jink replaces the installed one.
+    /// Install the service and start its daemon (macOS: with sudo; Windows:
+    /// as Administrator); a new version of jink replaces the installed one.
     Install,
-    /// Stop and remove the service and its settings (with sudo).
+    /// Stop and remove the service and its settings (as for install).
     Uninstall,
     /// Show whether the service is installed and running.
     Status,
@@ -115,19 +117,23 @@ enum CliError {
     #[cfg(target_os = "macos")]
     #[error(transparent)]
     Service(#[from] jink_macos::service::ServiceError),
-    #[cfg(target_os = "macos")]
+    #[cfg(windows)]
+    #[error(transparent)]
+    Service(#[from] jink_daemon::service::ServiceError),
+    #[cfg(any(windows, target_os = "macos"))]
     #[error(transparent)]
     Daemon(#[from] jink_daemon::DaemonError),
-    #[cfg(target_os = "macos")]
+    #[cfg(any(windows, target_os = "macos"))]
     #[error(
         "cannot reach the jink daemon ({0}); is the service installed \
-         (`sudo jink service install`)?"
+         (macOS: `sudo jink service install`; Windows: `jink service install` \
+         as Administrator)?"
     )]
     NoDaemon(std::io::Error),
-    #[cfg(target_os = "macos")]
+    #[cfg(any(windows, target_os = "macos"))]
     #[error("not JSON: {0}")]
     Json(String),
-    #[cfg(target_os = "macos")]
+    #[cfg(any(windows, target_os = "macos"))]
     #[error("the daemon refused the request")]
     Refused,
     #[cfg(not(any(windows, target_os = "macos")))]
@@ -158,8 +164,8 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     use std::collections::HashSet;
 
     use jink_core::engine::PacketEngine;
-    use jink_windivert::Event;
     use jink_windivert::filter::{FilterOptions, build};
+    use jink_windivert::{Event, Stop};
 
     let config = strategy::load(&args.strategy, args.game_filter)?;
     let partial = config
@@ -196,6 +202,7 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     let mut seen = HashSet::new();
     let mut on_event = |event: Event| {
         let message = match event {
+            Event::Capturing => return,
             Event::PlanFailed(e) => format!("rule not applied: {e}"),
             Event::SendFailed(e) => format!("send failed: {e}"),
         };
@@ -203,7 +210,8 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
             let _ = writeln!(std::io::stderr().lock(), "jink: {message}");
         }
     };
-    jink_windivert::run(&mut engine, &filter, &mut on_event)?;
+    // Runs until Ctrl+C ends the process.
+    jink_windivert::run(&mut engine, &filter, &mut on_event, &Stop::new())?;
     Ok(())
 }
 
@@ -352,13 +360,21 @@ fn main() -> ExitCode {
         #[cfg(target_os = "macos")]
         Command::Daemon => jink_daemon::run(std::path::Path::new(jink_macos::service::HOME))
             .map_err(CliError::from),
+        #[cfg(windows)]
+        Command::Daemon => jink_daemon::run().map_err(CliError::from),
         #[cfg(target_os = "macos")]
         Command::Service { action } => match action {
             ServiceAction::Install => service::install(),
             ServiceAction::Uninstall => service::uninstall(),
             ServiceAction::Status => service::status(),
         },
-        #[cfg(target_os = "macos")]
+        #[cfg(windows)]
+        Command::Service { action } => match action {
+            ServiceAction::Install => winservice::install(),
+            ServiceAction::Uninstall => winservice::uninstall(),
+            ServiceAction::Status => winservice::status(),
+        },
+        #[cfg(any(windows, target_os = "macos"))]
         Command::Ctl { command } => ctl::run(command),
     };
     match result {

@@ -65,6 +65,8 @@ reinstall the background service.
   - `checking`: just started
   - `online`: with `uplink` (the interface traffic leaves through) and `ipv6`
     (the network has IPv6, which jink turns away so that apps use IPv4)
+  - `active`: traffic on every network goes through jink (Windows, which
+    works on all networks at once and has no `online` or `offline`)
   - `offline`: no network; jink waits for one
   - `bypassed`: jink cannot work on this network and traffic goes around it;
     with a `problem`

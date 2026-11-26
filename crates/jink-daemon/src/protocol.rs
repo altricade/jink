@@ -168,6 +168,9 @@ pub enum Network {
     /// Traffic goes through jink and leaves through `uplink`; with `ipv6`,
     /// the network has IPv6, turned away so that apps use IPv4.
     Online { uplink: String, ipv6: bool },
+    /// Traffic on every network goes through jink (Windows, which does not
+    /// tell jink which network is in use, or whether there is one).
+    Active,
     /// No network; jink waits for one.
     Offline,
     /// jink cannot work on this network, so traffic bypasses it.

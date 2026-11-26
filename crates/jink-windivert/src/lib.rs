@@ -12,6 +12,6 @@ mod capture;
 mod timestamps;
 
 #[cfg(windows)]
-pub use capture::{Event, RunError, run};
+pub use capture::{Event, RunError, Stop, run};
 #[cfg(windows)]
 pub use timestamps::enable_tcp_timestamps;

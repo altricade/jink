@@ -132,6 +132,10 @@ fn statuses() -> BTreeMap<&'static str, Message> {
             ),
         ),
         (
+            "status-active",
+            status(on(Network::Active), "alt", false, None),
+        ),
+        (
             "status-checking",
             status(on(Network::Checking), "alt", false, None),
         ),
