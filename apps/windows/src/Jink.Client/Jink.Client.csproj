@@ -1,0 +1,9 @@
+<!-- Talking to the daemon over its pipe. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Jink.Client</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Jink.Protocol\Jink.Protocol.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+# The analyzer gate for the Windows app: every .NET rule is an error
+# (Directory.Build.props, AnalysisLevel latest-all). The rules turned off
+# here, with why; nothing in the code turns a rule off.
+root = true
+
+[*.cs]
+# Closed families (Message, Engine, Network, Request, ...) are abstract
+# records with their cases nested in them (Engine.On, Network.Active), so a
+# value is always exactly one known case. CA1034 is guidance for libraries
+# that other teams consume; these are jink's own.
+dotnet_diagnostic.CA1034.severity = none
+# Names that are Visual Basic keywords (Request.Stop, Message.Error): jink's
+# libraries are used from C# only.
+dotnet_diagnostic.CA1716.severity = none
+
+[tests/**.cs]
+# Tests must keep the test's context (xunit's own analyzer, xUnit1030, says
+# so, and xunit turns CA2007 off in test methods itself; this covers the
+# lambdas and helpers too). CA2007 is for library code.
+dotnet_diagnostic.CA2007.severity = none

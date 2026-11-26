@@ -6,3 +6,5 @@
 /apps/macos/JinkKit/.build/
 /apps/macos/JinkKit/.swiftpm/
 /dist/
+/apps/windows/**/bin/
+/apps/windows/**/obj/

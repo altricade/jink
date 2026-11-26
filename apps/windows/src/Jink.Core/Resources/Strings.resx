@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- jink's Windows app text (English). Every key is in both files; Text.cs
+     reads them, and the tests check that they match. -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Off" xml:space="preserve"><value>Off</value></data>
+  <data name="Starting" xml:space="preserve"><value>Starting…</value></data>
+  <data name="OnChecking" xml:space="preserve"><value>On, checking the network…</value></data>
+  <data name="On" xml:space="preserve"><value>On</value></data>
+  <data name="OnVia" xml:space="preserve"><value>On, via {0}</value></data>
+  <data name="OnWaiting" xml:space="preserve"><value>On, waiting for a network</value></data>
+  <data name="OnNotWorking" xml:space="preserve"><value>On, but not working: {0}</value></data>
+  <data name="Stopped" xml:space="preserve"><value>Stopped: {0}</value></data>
+  <data name="Finding" xml:space="preserve"><value>Finding a strategy…</value></data>
+  <data name="FindingTrying" xml:space="preserve"><value>Finding a strategy: trying {0}</value></data>
+  <data name="Connecting" xml:space="preserve"><value>Connecting to the background service…</value></data>
+  <data name="NoService" xml:space="preserve"><value>jink's background service is not running. Reinstall jink to fix it.</value></data>
+  <data name="OtherVersion" xml:space="preserve"><value>The background service is from another version of jink. Reinstall jink to fix it.</value></data>
+  <data name="Strategy" xml:space="preserve"><value>Strategy</value></data>
+  <data name="Partly" xml:space="preserve"><value>{0} (partly)</value></data>
+  <data name="FindBest" xml:space="preserve"><value>Find the best strategy</value></data>
+  <data name="FindTakesTime" xml:space="preserve"><value>Takes a minute or two. Sites may not open meanwhile.</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Kept" xml:space="preserve"><value>Kept {0}: {1} of {2} checks passed ({3} without jink).</value></data>
+  <data name="NothingBlocked" xml:space="preserve"><value>Nothing is blocked here: every site works without jink.</value></data>
+  <data name="NoneHelped" xml:space="preserve"><value>No strategy did better than without jink.</value></data>
+  <data name="NoNetwork" xml:space="preserve"><value>No network: the sites could not be reached at all.</value></data>
+  <data name="Details" xml:space="preserve"><value>Details</value></data>
+  <data name="WithoutJink" xml:space="preserve"><value>Without jink</value></data>
+  <data name="Settings" xml:space="preserve"><value>Settings…</value></data>
+  <data name="Quit" xml:space="preserve"><value>Quit</value></data>
+  <data name="General" xml:space="preserve"><value>General</value></data>
+  <data name="Sites" xml:space="preserve"><value>Sites</value></data>
+  <data name="Ips" xml:space="preserve"><value>IPs</value></data>
+  <data name="Gaming" xml:space="preserve"><value>Gaming</value></data>
+  <data name="StartWithWindows" xml:space="preserve"><value>Turn on when Windows starts</value></data>
+  <data name="OpenAtSignIn" xml:space="preserve"><value>Open jink when I sign in</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="LanguageSystem" xml:space="preserve"><value>As Windows</value></data>
+  <data name="MySites" xml:space="preserve"><value>My sites</value></data>
+  <data name="MySitesHint" xml:space="preserve"><value>Sites jink should also unblock: one per line; links are fine.</value></data>
+  <data name="ExcludedSites" xml:space="preserve"><value>Excluded sites</value></data>
+  <data name="ExcludedSitesHint" xml:space="preserve"><value>Sites jink should leave alone.</value></data>
+  <data name="MyIps" xml:space="preserve"><value>My IPs</value></data>
+  <data name="MyIpsHint" xml:space="preserve"><value>Addresses or networks (1.2.3.0/24) jink should also unblock.</value></data>
+  <data name="ExcludedIps" xml:space="preserve"><value>Excluded IPs</value></data>
+  <data name="ExcludedIpsHint" xml:space="preserve"><value>Addresses or networks jink should leave alone.</value></data>
+  <data name="IpList" xml:space="preserve"><value>IP list</value></data>
+  <data name="IpListHint" xml:space="preserve"><value>Also treat traffic to these addresses, whatever the site name.</value></data>
+  <data name="IpListOff" xml:space="preserve"><value>Off</value></data>
+  <data name="IpListBuiltIn" xml:space="preserve"><value>Built-in list</value></data>
+  <data name="IpListAll" xml:space="preserve"><value>All addresses</value></data>
+  <data name="GamingMode" xml:space="preserve"><value>Gaming mode</value></data>
+  <data name="GamingHint" xml:space="preserve"><value>Also unblock game traffic to the servers of the IP list.</value></data>
+  <data name="Advanced" xml:space="preserve"><value>Advanced</value></data>
+  <data name="Protocols" xml:space="preserve"><value>Protocols</value></data>
+  <data name="TcpAndUdp" xml:space="preserve"><value>TCP and UDP</value></data>
+  <data name="TcpPorts" xml:space="preserve"><value>TCP ports</value></data>
+  <data name="UdpPorts" xml:space="preserve"><value>UDP ports</value></data>
+  <data name="Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Revert" xml:space="preserve"><value>Revert</value></data>
+  <data name="NotSaved" xml:space="preserve"><value>Some entries are not valid; nothing was saved.</value></data>
+  <data name="SettingsLater" xml:space="preserve"><value>Settings show once the background service runs.</value></data>
+  <data name="RoutesTaken" xml:space="preserve"><value>Another app (a VPN?) routes all traffic, so jink stands aside.</value></data>
+  <data name="NoNetworkNow" xml:space="preserve"><value>There is no network.</value></data>
+  <data name="NotOnline" xml:space="preserve"><value>It did not get online in time.</value></data>
+  <data name="NotAdministrator" xml:space="preserve"><value>The service does not run as administrator.</value></data>
+  <data name="AlreadyRunning" xml:space="preserve"><value>Another copy of jink is running.</value></data>
+  <data name="NoInterface" xml:space="preserve"><value>jink could not create its network interface.</value></data>
+  <data name="Routes" xml:space="preserve"><value>jink could not read or change the network routes.</value></data>
+  <data name="Capture" xml:space="preserve"><value>jink could not see or send network traffic.</value></data>
+  <data name="MissingDriver" xml:space="preserve"><value>A file jink needs (WinDivert64.sys) is missing: reinstall jink.</value></data>
+  <data name="Driver" xml:space="preserve"><value>Windows did not load jink's network driver (WinDivert). An antivirus may block it.</value></data>
+  <data name="TcpTimestamps" xml:space="preserve"><value>Windows did not turn on TCP timestamps, so some of this strategy's fakes do not work.</value></data>
+  <data name="BadStrategy" xml:space="preserve"><value>This strategy does not work with these settings.</value></data>
+  <data name="NotSavedService" xml:space="preserve"><value>jink could not save its settings.</value></data>
+  <data name="Unchanged" xml:space="preserve"><value>Some connections went through unchanged.</value></data>
+  <data name="RoutesLeft" xml:space="preserve"><value>jink could not remove all of its network routes.</value></data>
+  <data name="StoppedUnexpectedly" xml:space="preserve"><value>jink stopped unexpectedly.</value></data>
+  <data name="NameNotFound" xml:space="preserve"><value>name not found</value></data>
+  <data name="Unreachable" xml:space="preserve"><value>unreachable</value></data>
+  <data name="ConnectionCut" xml:space="preserve"><value>connection cut</value></data>
+  <data name="WrongCertificate" xml:space="preserve"><value>wrong certificate (a block page?)</value></data>
+  <data name="NoReply" xml:space="preserve"><value>no reply</value></data>
+  <data name="TimedOut" xml:space="preserve"><value>timed out</value></data>
+  <data name="NoAnswer" xml:space="preserve"><value>The background service did not answer.</value></data>
+  <data name="NotUnderstood" xml:space="preserve"><value>The background service answered something this app does not understand. Reinstall jink.</value></data>
+  <data name="UnknownStrategy" xml:space="preserve"><value>The service does not know the strategy {0}. Reinstall jink.</value></data>
+  <data name="InvalidSettings" xml:space="preserve"><value>Some settings are not valid.</value></data>
+  <data name="EntryEmpty" xml:space="preserve"><value>an empty line</value></data>
+  <data name="EntryIpAddress" xml:space="preserve"><value>an IP address: put it under IPs</value></data>
+  <data name="EntryNotAscii" xml:space="preserve"><value>a non-Latin name: enter its xn-- form</value></data>
+  <data name="EntryNoDot" xml:space="preserve"><value>the ending is missing (youtube.com, not youtube)</value></data>
+  <data name="EntryInvalidSite" xml:space="preserve"><value>not a site name</value></data>
+  <data name="EntryInvalidIp" xml:space="preserve"><value>not an IP address or network</value></data>
+  <data name="EntryInvalidPorts" xml:space="preserve"><value>not a port or range (like 1024-65535)</value></data>
+</root>

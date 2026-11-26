@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jink.Client/Jink.Client.csproj" />
+    <Project Path="src/Jink.Core/Jink.Core.csproj" />
+    <Project Path="src/Jink.Protocol/Jink.Protocol.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jink.Tests/Jink.Tests.csproj" />
+  </Folder>
+</Solution>

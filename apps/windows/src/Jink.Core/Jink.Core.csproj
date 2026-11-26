@@ -1,0 +1,11 @@
+<!-- The app's state and actions, its text (English and Russian) and the
+     settings form: everything but the windows, so it is tested on any OS. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Jink.Core</RootNamespace>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Jink.Client\Jink.Client.csproj" />
+  </ItemGroup>
+</Project>

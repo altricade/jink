@@ -1,0 +1,7 @@
+<!-- What the daemon and the app say to each other: the messages and their
+     JSON. Mirrors crates/jink-daemon/src/protocol.rs. Depends on nothing. -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Jink.Protocol</RootNamespace>
+  </PropertyGroup>
+</Project>

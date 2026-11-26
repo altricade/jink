@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- jink's Windows app text (Russian). Every key is in both files; Text.cs
+     reads them, and the tests check that they match. -->
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="Off" xml:space="preserve"><value>Выключено</value></data>
+  <data name="Starting" xml:space="preserve"><value>Запуск…</value></data>
+  <data name="OnChecking" xml:space="preserve"><value>Включено, проверка сети…</value></data>
+  <data name="On" xml:space="preserve"><value>Включено</value></data>
+  <data name="OnVia" xml:space="preserve"><value>Включено, через {0}</value></data>
+  <data name="OnWaiting" xml:space="preserve"><value>Включено, ожидание сети</value></data>
+  <data name="OnNotWorking" xml:space="preserve"><value>Включено, но не работает: {0}</value></data>
+  <data name="Stopped" xml:space="preserve"><value>Остановлено: {0}</value></data>
+  <data name="Finding" xml:space="preserve"><value>Подбор стратегии…</value></data>
+  <data name="FindingTrying" xml:space="preserve"><value>Подбор стратегии: пробуем {0}</value></data>
+  <data name="Connecting" xml:space="preserve"><value>Подключение к фоновой службе…</value></data>
+  <data name="NoService" xml:space="preserve"><value>Фоновая служба jink не запущена. Переустановите jink, чтобы это исправить.</value></data>
+  <data name="OtherVersion" xml:space="preserve"><value>Фоновая служба — от другой версии jink. Переустановите jink, чтобы это исправить.</value></data>
+  <data name="Strategy" xml:space="preserve"><value>Стратегия</value></data>
+  <data name="Partly" xml:space="preserve"><value>{0} (частично)</value></data>
+  <data name="FindBest" xml:space="preserve"><value>Подобрать лучшую стратегию</value></data>
+  <data name="FindTakesTime" xml:space="preserve"><value>Это займёт минуту-две. Пока сайты могут не открываться.</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Отменить</value></data>
+  <data name="Kept" xml:space="preserve"><value>Выбрана {0}: пройдено {1} из {2} проверок (без jink — {3}).</value></data>
+  <data name="NothingBlocked" xml:space="preserve"><value>Здесь ничего не заблокировано: все сайты работают без jink.</value></data>
+  <data name="NoneHelped" xml:space="preserve"><value>Ни одна стратегия не сработала лучше, чем без jink.</value></data>
+  <data name="NoNetwork" xml:space="preserve"><value>Нет сети: до сайтов вообще не удалось достучаться.</value></data>
+  <data name="Details" xml:space="preserve"><value>Подробности</value></data>
+  <data name="WithoutJink" xml:space="preserve"><value>Без jink</value></data>
+  <data name="Settings" xml:space="preserve"><value>Настройки…</value></data>
+  <data name="Quit" xml:space="preserve"><value>Выйти</value></data>
+  <data name="General" xml:space="preserve"><value>Основные</value></data>
+  <data name="Sites" xml:space="preserve"><value>Сайты</value></data>
+  <data name="Ips" xml:space="preserve"><value>IP-адреса</value></data>
+  <data name="Gaming" xml:space="preserve"><value>Игры</value></data>
+  <data name="StartWithWindows" xml:space="preserve"><value>Включать при запуске Windows</value></data>
+  <data name="OpenAtSignIn" xml:space="preserve"><value>Открывать jink при входе в Windows</value></data>
+  <data name="Language" xml:space="preserve"><value>Язык</value></data>
+  <data name="LanguageSystem" xml:space="preserve"><value>Как в Windows</value></data>
+  <data name="MySites" xml:space="preserve"><value>Мои сайты</value></data>
+  <data name="MySitesHint" xml:space="preserve"><value>Сайты, которые jink тоже должен разблокировать: по одному в строке, можно ссылками.</value></data>
+  <data name="ExcludedSites" xml:space="preserve"><value>Исключённые сайты</value></data>
+  <data name="ExcludedSitesHint" xml:space="preserve"><value>Сайты, которые jink не должен трогать.</value></data>
+  <data name="MyIps" xml:space="preserve"><value>Мои IP</value></data>
+  <data name="MyIpsHint" xml:space="preserve"><value>Адреса или сети (1.2.3.0/24), которые jink тоже должен разблокировать.</value></data>
+  <data name="ExcludedIps" xml:space="preserve"><value>Исключённые IP</value></data>
+  <data name="ExcludedIpsHint" xml:space="preserve"><value>Адреса или сети, которые jink не должен трогать.</value></data>
+  <data name="IpList" xml:space="preserve"><value>Список IP</value></data>
+  <data name="IpListHint" xml:space="preserve"><value>Обрабатывать трафик к этим адресам, каким бы ни было имя сайта.</value></data>
+  <data name="IpListOff" xml:space="preserve"><value>Выключено</value></data>
+  <data name="IpListBuiltIn" xml:space="preserve"><value>Встроенный список</value></data>
+  <data name="IpListAll" xml:space="preserve"><value>Все адреса</value></data>
+  <data name="GamingMode" xml:space="preserve"><value>Игровой режим</value></data>
+  <data name="GamingHint" xml:space="preserve"><value>Разблокировать и игровой трафик к серверам из списка IP.</value></data>
+  <data name="Advanced" xml:space="preserve"><value>Дополнительно</value></data>
+  <data name="Protocols" xml:space="preserve"><value>Протоколы</value></data>
+  <data name="TcpAndUdp" xml:space="preserve"><value>TCP и UDP</value></data>
+  <data name="TcpPorts" xml:space="preserve"><value>Порты TCP</value></data>
+  <data name="UdpPorts" xml:space="preserve"><value>Порты UDP</value></data>
+  <data name="Save" xml:space="preserve"><value>Сохранить</value></data>
+  <data name="Revert" xml:space="preserve"><value>Отменить изменения</value></data>
+  <data name="NotSaved" xml:space="preserve"><value>Некоторые записи неверны; ничего не сохранено.</value></data>
+  <data name="SettingsLater" xml:space="preserve"><value>Настройки появятся, когда заработает фоновая служба.</value></data>
+  <data name="RoutesTaken" xml:space="preserve"><value>Другое приложение (VPN?) направляет весь трафик через себя, поэтому jink не вмешивается.</value></data>
+  <data name="NoNetworkNow" xml:space="preserve"><value>Нет сети.</value></data>
+  <data name="NotOnline" xml:space="preserve"><value>Не удалось вовремя выйти в сеть.</value></data>
+  <data name="NotAdministrator" xml:space="preserve"><value>Служба запущена без прав администратора.</value></data>
+  <data name="AlreadyRunning" xml:space="preserve"><value>Уже запущена другая копия jink.</value></data>
+  <data name="NoInterface" xml:space="preserve"><value>jink не смог создать свой сетевой интерфейс.</value></data>
+  <data name="Routes" xml:space="preserve"><value>jink не смог прочитать или изменить сетевые маршруты.</value></data>
+  <data name="Capture" xml:space="preserve"><value>jink не смог видеть или отправлять сетевой трафик.</value></data>
+  <data name="MissingDriver" xml:space="preserve"><value>Не хватает файла, нужного jink (WinDivert64.sys): переустановите jink.</value></data>
+  <data name="Driver" xml:space="preserve"><value>Windows не загрузила сетевой драйвер jink (WinDivert). Возможно, его блокирует антивирус.</value></data>
+  <data name="TcpTimestamps" xml:space="preserve"><value>Windows не включила метки времени TCP, поэтому часть подмен этой стратегии не работает.</value></data>
+  <data name="BadStrategy" xml:space="preserve"><value>Эта стратегия не работает с такими настройками.</value></data>
+  <data name="NotSavedService" xml:space="preserve"><value>jink не смог сохранить настройки.</value></data>
+  <data name="Unchanged" xml:space="preserve"><value>Некоторые соединения прошли без обработки.</value></data>
+  <data name="RoutesLeft" xml:space="preserve"><value>jink не смог удалить все свои сетевые маршруты.</value></data>
+  <data name="StoppedUnexpectedly" xml:space="preserve"><value>jink неожиданно остановился.</value></data>
+  <data name="NameNotFound" xml:space="preserve"><value>имя не найдено</value></data>
+  <data name="Unreachable" xml:space="preserve"><value>недоступен</value></data>
+  <data name="ConnectionCut" xml:space="preserve"><value>соединение оборвано</value></data>
+  <data name="WrongCertificate" xml:space="preserve"><value>чужой сертификат (страница блокировки?)</value></data>
+  <data name="NoReply" xml:space="preserve"><value>нет ответа</value></data>
+  <data name="TimedOut" xml:space="preserve"><value>время ожидания истекло</value></data>
+  <data name="NoAnswer" xml:space="preserve"><value>Фоновая служба не ответила.</value></data>
+  <data name="NotUnderstood" xml:space="preserve"><value>Фоновая служба ответила непонятно для этого приложения. Переустановите jink.</value></data>
+  <data name="UnknownStrategy" xml:space="preserve"><value>Служба не знает стратегию {0}. Переустановите jink.</value></data>
+  <data name="InvalidSettings" xml:space="preserve"><value>Некоторые настройки неверны.</value></data>
+  <data name="EntryEmpty" xml:space="preserve"><value>пустая строка</value></data>
+  <data name="EntryIpAddress" xml:space="preserve"><value>это IP-адрес: добавьте его в IP-адреса</value></data>
+  <data name="EntryNotAscii" xml:space="preserve"><value>имя не латиницей: введите его в форме xn--</value></data>
+  <data name="EntryNoDot" xml:space="preserve"><value>нет окончания (youtube.com, а не youtube)</value></data>
+  <data name="EntryInvalidSite" xml:space="preserve"><value>не имя сайта</value></data>
+  <data name="EntryInvalidIp" xml:space="preserve"><value>не IP-адрес и не сеть</value></data>
+  <data name="EntryInvalidPorts" xml:space="preserve"><value>не порт и не диапазон (например, 1024-65535)</value></data>
+</root>
