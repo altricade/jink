@@ -1,0 +1,11 @@
+{"cmd":"status"}
+{"cmd":"strategies"}
+{"cmd":"start"}
+{"cmd":"start","strategy":"alt13"}
+{"cmd":"stop"}
+{"cmd":"settings"}
+{"cmd":"update_settings","settings":{"my_sites":["youtube.com"],"my_ips":["203.0.113.0/24"],"excluded_sites":["example.com"],"excluded_ips":["198.51.100.7/32"],"gaming":{"mode":"both","tcp_ports":"1024-65535","udp_ports":"27015"},"ip_list":"built_in"}}
+{"cmd":"set_start_at_boot","on":true}
+{"cmd":"find"}
+{"cmd":"cancel_find"}
+{"cmd":"watch"}

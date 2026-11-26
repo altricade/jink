@@ -26,6 +26,11 @@ pub(crate) enum Ctl {
     SetSettings { file: PathBuf },
     /// Whether desync starts by itself when the Mac starts.
     Boot { state: OnOff },
+    /// Try every strategy and keep the one that gets through best (about
+    /// two minutes; `watch` shows the progress, `status` the result).
+    Find,
+    /// Stop finding, leaving desync as it was.
+    CancelFind,
     /// Follow the status as it changes (Ctrl+C to stop).
     Watch,
 }
@@ -52,6 +57,8 @@ pub(crate) fn run(command: &Ctl) -> Result<(), CliError> {
         Ctl::Boot { state } => {
             json!({"cmd": "set_start_at_boot", "on": matches!(state, OnOff::On)})
         }
+        Ctl::Find => json!({"cmd": "find"}),
+        Ctl::CancelFind => json!({"cmd": "cancel_find"}),
         Ctl::Watch => json!({"cmd": "watch"}),
     };
     let mut stream = UnixStream::connect(jink_daemon::SOCKET).map_err(CliError::NoDaemon)?;

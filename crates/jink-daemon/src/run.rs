@@ -11,6 +11,7 @@ use tokio::signal::unix::{SignalKind, signal};
 
 use crate::daemon::{Setup, spawn};
 use crate::macos::MacOs;
+use crate::probe::Prober;
 use crate::server;
 
 /// The control socket.
@@ -32,6 +33,8 @@ pub enum DaemonError {
     Folder { path: String, source: io::Error },
     #[error("cannot start the async runtime or signal handlers: {0}")]
     Runtime(io::Error),
+    #[error("cannot set up the certificate checks for finding strategies: {0}")]
+    Checks(rustls::Error),
 }
 
 /// Runs the daemon until a signal, keeping its state in `home`.
@@ -58,8 +61,10 @@ async fn serve(home: &Path) -> Result<(), DaemonError> {
     let mut interrupt = signal(SignalKind::interrupt()).map_err(DaemonError::Runtime)?;
     let mut terminate = signal(SignalKind::terminate()).map_err(DaemonError::Runtime)?;
     let mut hangup = signal(SignalKind::hangup()).map_err(DaemonError::Runtime)?;
+    let probe = Prober::system().map_err(DaemonError::Checks)?;
     let (handle, task) = spawn(Setup {
         backend: MacOs,
+        probe,
         saved_at: home.join(STATE),
         log: Box::new(log),
     });

@@ -10,10 +10,22 @@ publish.workspace = true
 # Seeds the random fields of fakes.
 getrandom = "0.4.3"
 jink-core = { path = "../jink-core" }
+# The finder's host checks: TLS with the `ring` backend (aws-lc needs cmake
+# and nasm to build on Windows), certificates checked by the system, so that
+# antivirus that inspects HTTPS with its own root still passes.
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-platform-verifier = "0.7.1"
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "signal", "time"] }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+
+[dev-dependencies]
+# Certificates for the local test servers.
+rcgen = "0.14.10"
+# Paused time, for finding with engines that never come online.
+tokio = { version = "1.54.1", features = ["test-util"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 jink-macos = { path = "../jink-macos" }

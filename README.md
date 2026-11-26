@@ -88,7 +88,17 @@ not work while jink runs (ICMP is not relayed); test with a browser or `curl`.
 cargo test
 cargo clippy --all-targets -- -D warnings
 cargo fmt --check
-WINDIVERT_PATH=/any/empty/dir cargo clippy --workspace --target x86_64-pc-windows-msvc -- -D warnings  # Windows check from macOS
+```
+
+The Windows check from macOS needs Windows' C headers (the TLS code
+compiles some C): install [cargo-xwin](https://github.com/rust-cross/cargo-xwin)
+and LLVM once (`brew install llvm lld`, `cargo install cargo-xwin --locked`;
+the first run downloads Microsoft's CRT and SDK, accepting their license), then:
+
+```sh
+PATH="$HOME/.cargo/bin:/opt/homebrew/opt/llvm/bin:/opt/homebrew/opt/lld/bin:$PATH" \
+  WINDIVERT_PATH=/any/empty/dir \
+  cargo xwin clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
 ```
 
 Lints in `Cargo.toml` deny `unsafe`, `unwrap`/`expect`/`panic`, unchecked

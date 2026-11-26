@@ -1,0 +1,1 @@
+{"type":"error","error":{"code":"invalid_settings","problems":[{"field":"my_sites","index":2,"code":"no_dot"},{"field":"gaming.udp_ports","index":null,"code":"invalid_ports"}]}}

@@ -1,7 +1,8 @@
 //! The daemon's state, kept by one task that takes requests in order: the
-//! saved choices, whether desync runs, and what the running engine reports.
-//! The engine itself is a [`Backend`], so this works the same on every
-//! platform (and in tests, with a fake one).
+//! saved choices, whether desync runs, and what the running engine (or the
+//! finder) reports. The engine itself is a [`Backend`] and the finder's
+//! site checks a [`Probe`], so this works the same on every platform (and
+//! in tests, with fakes).
 
 use std::collections::HashSet;
 use std::future::Future;
@@ -15,9 +16,11 @@ use jink_core::settings::Settings;
 use tokio::sync::{broadcast, mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
 
+use crate::finder::{self, Cancel};
+use crate::probe::Probe;
 use crate::protocol::{
-    Engine, Failure, Message, Network, Problem, Request, SettingsWire, Status, StrategyInfo,
-    Support,
+    Engine, Failure, FindResult, Found, Message, Network, Problem, Request, SettingsWire, Status,
+    StrategyInfo, Support,
 };
 use crate::saved::Saved;
 
@@ -104,15 +107,22 @@ enum Input {
     ShutDown(oneshot::Sender<()>),
 }
 
-/// A report from the engine of run number `.0`. Its channel is unbounded:
-/// the task may be waiting for that engine to end, which must never wait
-/// for room in the channel.
+/// A report from the engine (or finder) of run number `.0`. Its channel is
+/// unbounded: the task may be waiting for that engine to end, which must
+/// never wait for room in the channel.
 type Report = (u64, EngineInput);
 
 #[derive(Debug)]
 enum EngineInput {
     Event(BackendEvent),
     Ended(Result<(), Problem>),
+    /// The finder is at `step`, trying `strategy`.
+    Step {
+        step: usize,
+        strategy: Option<String>,
+    },
+    /// The finder is done.
+    Found(Found),
 }
 
 /// A running engine.
@@ -122,15 +132,28 @@ struct Running {
     task: JoinHandle<()>,
 }
 
-/// Where the daemon keeps its state, and where it reports.
-pub struct Setup<B> {
+/// A running finder.
+#[derive(Debug)]
+struct Finding {
+    cancel: watch::Sender<bool>,
+    task: JoinHandle<()>,
+    /// Its steps.
+    of: usize,
+    /// Whether desync was on before, to turn it back on if nothing is kept.
+    resume: bool,
+}
+
+/// What the daemon runs with, where it keeps its state, and where it
+/// reports.
+pub struct Setup<B, P> {
     pub backend: B,
+    pub probe: P,
     pub saved_at: PathBuf,
     /// One line per state change or notice, for the daemon's log.
     pub log: Box<dyn Fn(&str) + Send + Sync>,
 }
 
-impl<B> std::fmt::Debug for Setup<B> {
+impl<B, P> std::fmt::Debug for Setup<B, P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Setup")
             .field("saved_at", &self.saved_at)
@@ -140,9 +163,10 @@ impl<B> std::fmt::Debug for Setup<B> {
 
 /// Starts the daemon's task: loads the saved state, and starts desync if it
 /// is set to start by itself.
-pub fn spawn<B: Backend>(setup: Setup<B>) -> (Handle, JoinHandle<()>) {
+pub fn spawn<B: Backend, P: Probe>(setup: Setup<B, P>) -> (Handle, JoinHandle<()>) {
     let Setup {
         backend,
+        probe,
         saved_at,
         log,
     } = setup;
@@ -170,6 +194,8 @@ pub fn spawn<B: Backend>(setup: Setup<B>) -> (Handle, JoinHandle<()>) {
         engine: Engine::Off,
         strategy: strategy.clone(),
         start_at_boot: saved.start_at_boot,
+        version: env!("CARGO_PKG_VERSION").to_owned(),
+        found: None,
     };
     let (requests, inputs) = mpsc::channel(32);
     let (reports, reported) = mpsc::unbounded_channel();
@@ -177,6 +203,7 @@ pub fn spawn<B: Backend>(setup: Setup<B>) -> (Handle, JoinHandle<()>) {
     let (notices, _) = broadcast::channel(64);
     let state = State {
         backend: Arc::new(backend),
+        probe: Arc::new(probe),
         saved_at,
         saved: Saved { strategy, ..saved },
         settings,
@@ -187,6 +214,7 @@ pub fn spawn<B: Backend>(setup: Setup<B>) -> (Handle, JoinHandle<()>) {
         log,
         reports,
         running: None,
+        finding: None,
         run: 0,
     };
     let task = tokio::spawn(state.serve(inputs, reported));
@@ -228,8 +256,9 @@ fn default_strategy(strategies: &[StrategyInfo]) -> String {
         .map_or_else(String::new, |s| s.id.clone())
 }
 
-struct State<B> {
+struct State<B, P> {
     backend: Arc<B>,
+    probe: Arc<P>,
     saved_at: PathBuf,
     saved: Saved,
     settings: Settings,
@@ -242,11 +271,12 @@ struct State<B> {
     /// For the engine's reports.
     reports: mpsc::UnboundedSender<Report>,
     running: Option<Running>,
+    finding: Option<Finding>,
     /// The number of the latest run; reports from earlier ones are stale.
     run: u64,
 }
 
-impl<B: Backend> State<B> {
+impl<B: Backend, P: Probe> State<B, P> {
     async fn serve(
         mut self,
         mut inputs: mpsc::Receiver<Input>,
@@ -264,6 +294,7 @@ impl<B: Backend> State<B> {
                         let _ = reply.send(answer);
                     }
                     Some(Input::ShutDown(done)) => {
+                        self.end_finding().await;
                         self.stop().await;
                         let _ = done.send(());
                         return;
@@ -277,6 +308,7 @@ impl<B: Backend> State<B> {
                 }
             }
         }
+        self.end_finding().await;
         self.stop().await;
     }
 
@@ -296,17 +328,19 @@ impl<B: Backend> State<B> {
                 if catalog::find(&id).is_none() {
                     return error(Failure::UnknownStrategy { strategy: id });
                 }
-                if let Err(failure) = self.save(Saved {
+                if let Err(detail) = self.save(Saved {
                     strategy: id,
                     ..self.saved.clone()
                 }) {
-                    return error(failure);
+                    return error(Failure::Failed { detail });
                 }
+                self.end_finding().await;
                 self.stop().await;
                 self.start();
                 Message::Done
             }
             Request::Stop => {
+                self.end_finding().await;
                 self.stop().await;
                 self.set_engine(Engine::Off);
                 Message::Done
@@ -316,11 +350,11 @@ impl<B: Backend> State<B> {
                     Ok(parsed) => parsed,
                     Err(problems) => return error(Failure::InvalidSettings { problems }),
                 };
-                if let Err(failure) = self.save(Saved {
+                if let Err(detail) = self.save(Saved {
                     settings: SettingsWire::from(&parsed),
                     ..self.saved.clone()
                 }) {
-                    return error(failure);
+                    return error(Failure::Failed { detail });
                 }
                 self.settings = parsed;
                 if self.running.is_some() {
@@ -330,11 +364,23 @@ impl<B: Backend> State<B> {
                 Message::Done
             }
             Request::SetStartAtBoot { on } => {
-                if let Err(failure) = self.save(Saved {
+                if let Err(detail) = self.save(Saved {
                     start_at_boot: on,
                     ..self.saved.clone()
                 }) {
-                    return error(failure);
+                    return error(Failure::Failed { detail });
+                }
+                Message::Done
+            }
+            Request::Find => {
+                if self.finding.is_none() {
+                    self.find().await;
+                }
+                Message::Done
+            }
+            Request::CancelFind => {
+                if let Some(resume) = self.end_finding().await {
+                    self.resume(resume);
                 }
                 Message::Done
             }
@@ -345,10 +391,10 @@ impl<B: Backend> State<B> {
     }
 
     /// Saves `saved` and makes it the current state, or says why not.
-    fn save(&mut self, saved: Saved) -> Result<(), Failure> {
-        saved.save(&self.saved_at).map_err(|e| Failure::Failed {
-            detail: format!("cannot save {}: {e}", self.saved_at.display()),
-        })?;
+    fn save(&mut self, saved: Saved) -> Result<(), String> {
+        saved
+            .save(&self.saved_at)
+            .map_err(|e| format!("cannot save {}: {e}", self.saved_at.display()))?;
         self.saved = saved;
         let (strategy, start_at_boot) = (self.saved.strategy.clone(), self.saved.start_at_boot);
         self.update(|status| {
@@ -421,6 +467,117 @@ impl<B: Backend> State<B> {
         }
     }
 
+    /// Stops desync and starts finding.
+    async fn find(&mut self) {
+        let resume = self.running.is_some();
+        self.stop().await;
+        let plan = self.plan();
+        let of = plan.len().saturating_add(1);
+        self.run = self.run.wrapping_add(1);
+        let run = self.run;
+        let (cancel, cancelled) = watch::channel(false);
+        let reports = self.reports.clone();
+        let steps = reports.clone();
+        // The daemon may be shutting down; then nobody needs the reports.
+        let step = move |step, strategy: Option<&str>| {
+            let strategy = strategy.map(str::to_owned);
+            let _ = steps.send((run, EngineInput::Step { step, strategy }));
+        };
+        let finder = finder::find(
+            Arc::clone(&self.backend),
+            Arc::clone(&self.probe),
+            plan,
+            step,
+            Cancel::new(cancelled),
+        );
+        let task = tokio::spawn(async move {
+            if let Some(found) = finder.await {
+                let _ = reports.send((run, EngineInput::Found(found)));
+            }
+        });
+        self.finding = Some(Finding {
+            cancel,
+            task,
+            of,
+            resume,
+        });
+        self.update(|status| status.found = None);
+        self.set_engine(Engine::Finding {
+            step: 1,
+            of,
+            strategy: None,
+        });
+    }
+
+    /// The strategies to try, with the current settings: the ones this
+    /// platform runs fully first, main ones before variants.
+    fn plan(&self) -> Vec<(String, Config)> {
+        let mut order: Vec<&StrategyInfo> = self.strategies.iter().collect();
+        order.sort_by_key(|s| (s.support != Support::Full, s.variant_of.is_some()));
+        order
+            .into_iter()
+            .filter_map(|info| {
+                let strategy = catalog::find(&info.id)?;
+                catalog::build(strategy, &self.settings)
+                    .map_err(|e| (self.log)(&format!("cannot try {}: {e}", info.id)))
+                    .ok()
+                    .map(|config| (info.id.clone(), config))
+            })
+            .collect()
+    }
+
+    /// Ends finding (and the engine it runs) if it runs; then whether
+    /// desync was on before it.
+    async fn end_finding(&mut self) -> Option<bool> {
+        let Finding {
+            cancel,
+            task,
+            resume,
+            ..
+        } = self.finding.take()?;
+        // It may have finished already.
+        let _ = cancel.send(true);
+        if let Err(e) = task.await {
+            (self.log)(&format!("the finder's task failed: {e}"));
+        }
+        // Its last reports are stale now: a result it sent just before
+        // being ended must not land on the next finding.
+        self.run = self.run.wrapping_add(1);
+        Some(resume)
+    }
+
+    /// Keeps what finding found: its strategy, turned on; or else desync
+    /// as it was.
+    fn found(&mut self, found: Found, resume: bool) {
+        (self.log)(&describe_found(&found));
+        let kept = match &found.result {
+            FindResult::Kept { strategy } => Some(strategy.clone()),
+            FindResult::NothingBlocked | FindResult::NoneHelped | FindResult::NoNetwork => None,
+        };
+        self.update(|status| status.found = Some(found));
+        let Some(strategy) = kept else {
+            return self.resume(resume);
+        };
+        match self.save(Saved {
+            strategy,
+            ..self.saved.clone()
+        }) {
+            Ok(()) => self.start(),
+            Err(detail) => self.set_engine(Engine::Failed {
+                problem: Problem::new("save", &detail),
+            }),
+        }
+    }
+
+    /// Desync back on if it was, else off.
+    fn resume(&mut self, on: bool) {
+        if on {
+            self.start();
+        } else {
+            self.set_engine(Engine::Off);
+        }
+    }
+
     fn engine(&mut self, input: EngineInput) {
         let network = |network| Engine::On { network };
         match input {
@@ -439,6 +596,17 @@ impl<B: Backend> State<B> {
                     (self.log)(&format!("{}: {}", problem.code, problem.detail));
                     // Nobody may be watching; that is fine.
                     let _ = self.notices.send(problem);
+                }
+            }
+            EngineInput::Step { step, strategy } => {
+                if let Some(Finding { of, .. }) = self.finding {
+                    self.set_engine(Engine::Finding { step, of, strategy });
+                }
+            }
+            EngineInput::Found(found) => {
+                // Its task ends right after this report: no need to wait.
+                if let Some(Finding { resume, .. }) = self.finding.take() {
+                    self.found(found, resume);
                 }
             }
             EngineInput::Ended(result) => {
@@ -490,5 +658,30 @@ fn describe(engine: &Engine) -> String {
             }
         },
         Engine::Failed { problem } => format!("failed: {} ({})", problem.code, problem.detail),
+        Engine::Finding { step, of, strategy } => format!(
+            "finding: step {step} of {of}, {}",
+            strategy.as_deref().unwrap_or("without jink")
+        ),
     }
+}
+
+/// A log line for what finding found.
+fn describe_found(found: &Found) -> String {
+    let result = match &found.result {
+        FindResult::Kept { strategy } => format!("keeping {strategy}"),
+        FindResult::NothingBlocked => "nothing is blocked".to_owned(),
+        FindResult::NoneHelped => "no strategy helped".to_owned(),
+        FindResult::NoNetwork => "no network".to_owned(),
+    };
+    let tried: Vec<String> = found
+        .tried
+        .iter()
+        .map(|t| format!("{} {}", t.strategy, t.checks.passed))
+        .collect();
+    format!(
+        "found: {result} ({} of {} checks passed without jink; {})",
+        found.without.passed,
+        found.checks,
+        tried.join(", ")
+    )
 }

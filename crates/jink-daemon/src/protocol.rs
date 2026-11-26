@@ -8,6 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::probe::{Outcome, Tls};
 use jink_core::settings::{
     Gaming, GamingMode, IpListMode, IpNet, Ports, Settings, Site, SiteError,
 };
@@ -38,6 +39,13 @@ pub enum Request {
     /// Whether desync starts by itself when the computer starts. Answered
     /// with [`Message::Done`].
     SetStartAtBoot { on: bool },
+    /// Tries every strategy and keeps the one that gets through best (see
+    /// [`Found`]); nothing new if already finding. `start` and `stop` end
+    /// it. Answered with [`Message::Done`] at once.
+    Find,
+    /// Ends finding, leaving desync as it was before. Answered with
+    /// [`Message::Done`].
+    CancelFind,
     /// Turns the connection into a stream of [`Message::Status`] (now, and
     /// at every change) and [`Message::Notice`].
     Watch,
@@ -74,6 +82,11 @@ pub struct Status {
     /// The strategy desync runs (or last ran) with.
     pub strategy: String,
     pub start_at_boot: bool,
+    /// The daemon's version (an app bundling another one offers to
+    /// reinstall the service).
+    pub version: String,
+    /// What the last finding found (since the daemon started).
+    pub found: Option<Found>,
 }
 
 /// Whether desync runs.
@@ -89,6 +102,61 @@ pub enum Engine {
     Failed {
         problem: Problem,
     },
+    /// Finding a strategy: at `step` of `of`, trying `strategy` (none at
+    /// the first step, which checks the sites without jink).
+    Finding {
+        step: usize,
+        of: usize,
+        strategy: Option<String>,
+    },
+}
+
+/// What finding found: what it did (`result`), how the sites answer without
+/// jink, and with each strategy tried, out of `checks` checks each.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Found {
+    #[serde(flatten)]
+    pub result: FindResult,
+    pub checks: usize,
+    pub without: Checks,
+    pub tried: Vec<Tried>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "result", rename_all = "snake_case")]
+pub enum FindResult {
+    /// `strategy` got through best; it is saved and on.
+    Kept { strategy: String },
+    /// Every site answers without jink; desync is as it was.
+    NothingBlocked,
+    /// No strategy got through better than none; desync is as it was.
+    NoneHelped,
+    /// No site could even be looked up or reached; desync is as it was.
+    NoNetwork,
+}
+
+/// One round of checks: each site over each TLS version.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+pub struct Checks {
+    pub passed: usize,
+    pub failed: Vec<FailedCheck>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct FailedCheck {
+    pub host: String,
+    pub tls: Tls,
+    pub outcome: Outcome,
+}
+
+/// A strategy tried; with a `problem` when it never came online, so its
+/// sites were not checked.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Tried {
+    pub strategy: String,
+    #[serde(flatten)]
+    pub checks: Checks,
+    pub problem: Option<Problem>,
 }
 
 /// The network while desync is on.
@@ -384,8 +452,9 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::{
-        Engine, Failure, GamingModeWire, IpListWire, Message, Network, Problem, Request,
-        SettingsProblem, SettingsWire, Status, StrategyInfo, Support,
+        Checks, Engine, FailedCheck, Failure, FindResult, Found, GamingModeWire, IpListWire,
+        Message, Network, Outcome, Problem, Request, SettingsProblem, SettingsWire, Status,
+        StrategyInfo, Support, Tls, Tried,
     };
 
     fn request(text: &str) -> Result<Request, serde_json::Error> {
@@ -399,6 +468,11 @@ mod tests {
     #[test]
     fn requests() {
         assert_eq!(request(r#"{"cmd":"status"}"#).unwrap(), Request::Status);
+        assert_eq!(request(r#"{"cmd":"find"}"#).unwrap(), Request::Find);
+        assert_eq!(
+            request(r#"{"cmd":"cancel_find"}"#).unwrap(),
+            Request::CancelFind
+        );
         assert_eq!(
             request(r#"{"cmd":"start"}"#).unwrap(),
             Request::Start { strategy: None }
@@ -444,12 +518,55 @@ mod tests {
             },
             strategy: "alt".into(),
             start_at_boot: true,
+            version: "0.1.0".into(),
+            found: None,
         };
         assert_eq!(
             wire(&Message::Status { status }),
             json!({"type": "status", "status": {
                 "engine": {"state": "on", "network": {"state": "online", "uplink": "en0", "ipv6": false}},
-                "strategy": "alt", "start_at_boot": true}})
+                "strategy": "alt", "start_at_boot": true, "version": "0.1.0",
+                "found": null}})
+        );
+        let finding = Engine::Finding {
+            step: 1,
+            of: 14,
+            strategy: None,
+        };
+        assert_eq!(
+            serde_json::to_value(&finding).unwrap(),
+            json!({"state": "finding", "step": 1, "of": 14, "strategy": null})
+        );
+        let found = Found {
+            result: FindResult::Kept {
+                strategy: "alt4".into(),
+            },
+            checks: 16,
+            without: Checks {
+                passed: 15,
+                failed: vec![FailedCheck {
+                    host: "i.ytimg.com".into(),
+                    tls: Tls::V12,
+                    outcome: Outcome::Cut,
+                }],
+            },
+            tried: vec![Tried {
+                strategy: "alt".into(),
+                checks: Checks::default(),
+                problem: Some(Problem::new("offline", &"no network")),
+            }],
+        };
+        assert_eq!(
+            serde_json::to_value(&found).unwrap(),
+            json!({"result": "kept", "strategy": "alt4", "checks": 16,
+                "without": {"passed": 15, "failed": [
+                    {"host": "i.ytimg.com", "tls": "1.2", "outcome": "cut"}]},
+                "tried": [{"strategy": "alt", "passed": 0, "failed": [],
+                    "problem": {"code": "offline", "detail": "no network"}}]})
+        );
+        assert_eq!(
+            serde_json::to_value(&FindResult::NothingBlocked).unwrap(),
+            json!({"result": "nothing_blocked"})
         );
         let failed = Engine::Failed {
             problem: Problem::new("not_root", &"jink needs root"),

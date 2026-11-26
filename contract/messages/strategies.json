@@ -1,0 +1,1 @@
+{"type":"strategies","strategies":[{"id":"general","name":"general","variant_of":null,"support":"partial"},{"id":"alt","name":"ALT","variant_of":null,"support":"full"},{"id":"alt6","name":"ALT6","variant_of":"general","support":"partial"}]}

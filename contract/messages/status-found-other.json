@@ -1,0 +1,1 @@
+{"type":"status","status":{"engine":{"state":"off"},"strategy":"alt","start_at_boot":false,"version":"0.1.0","found":{"result":"none_helped","checks":16,"without":{"passed":0,"failed":[{"host":"discord.com","tls":"1.2","outcome":"certificate"},{"host":"discord.com","tls":"1.3","outcome":"no_address"},{"host":"youtu.be","tls":"1.2","outcome":"unreachable"}]},"tried":[]}}}
