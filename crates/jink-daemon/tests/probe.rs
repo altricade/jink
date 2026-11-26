@@ -178,7 +178,9 @@ async fn a_closed_port_is_unreachable() -> Result<()> {
     let free = TcpListener::bind("127.0.0.1:0").await?.local_addr()?.port();
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let (_, verifier) = authority(&provider)?;
-    let prober = Prober::new(&provider, &verifier, free, LIMIT)?;
+    // The real limit: Windows takes 2 s to refuse a connection to a closed
+    // local port.
+    let prober = Prober::new(&provider, &verifier, free, Prober::LIMIT)?;
     assert_eq!(
         prober.check("localhost", Tls::V12).await,
         Outcome::Unreachable

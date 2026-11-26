@@ -16,6 +16,7 @@ use rustls::{ClientConfig, SupportedProtocolVersion};
 use serde::Serialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use tokio::task::JoinSet;
 use tokio_rustls::TlsConnector;
 
 /// The sites the finder checks: Discord and YouTube, by the names their
@@ -157,7 +158,7 @@ impl Prober {
             Ok(addresses) => addresses.collect(),
             Err(_) => return Outcome::NoAddress,
         };
-        let Some(stream) = connect(&addresses).await else {
+        let Some(stream) = first_connected(&addresses, TcpStream::connect).await else {
             return Outcome::Unreachable;
         };
         let connector = match tls {
@@ -180,15 +181,43 @@ impl Prober {
     }
 }
 
-/// A connection to the first address that takes one, in the system's order
-/// (as apps do).
-async fn connect(addresses: &[SocketAddr]) -> Option<TcpStream> {
-    for address in addresses {
-        if let Ok(stream) = TcpStream::connect(address).await {
-            return Some(stream);
+/// How long a connection attempt runs alone before the next address is
+/// tried alongside it (RFC 8305 suggests 250 ms).
+const STAGGER: Duration = Duration::from_millis(250);
+
+/// A connection to the first address that takes one. As browsers do
+/// ("Happy Eyeballs"), the addresses are tried in the system's order, each
+/// one when the one before has failed or has not connected within
+/// [`STAGGER`]: an address family that is broken here (IPv6 that times out,
+/// or that Windows takes 2 s to refuse) does not use up the time limit.
+async fn first_connected<T, F, C>(addresses: &[SocketAddr], connect: C) -> Option<T>
+where
+    T: Send + 'static,
+    F: Future<Output = io::Result<T>> + Send + 'static,
+    C: Fn(SocketAddr) -> F,
+{
+    let mut untried = addresses.iter().copied().peekable();
+    let mut attempts = JoinSet::new();
+    loop {
+        if let Some(address) = untried.next() {
+            attempts.spawn(connect(address));
+        }
+        let stagger = tokio::time::sleep(STAGGER);
+        tokio::pin!(stagger);
+        loop {
+            tokio::select! {
+                joined = attempts.join_next() => match joined {
+                    Some(Ok(Ok(stream))) => return Some(stream),
+                    // Failed (or none running): on to the next address at
+                    // once, if any.
+                    _ if untried.peek().is_some() => break,
+                    Some(_) => {}
+                    None => return None,
+                },
+                () = &mut stagger, if untried.peek().is_some() => break,
+            }
         }
     }
-    None
 }
 
 fn handshake_failure(error: &io::Error) -> Outcome {
@@ -198,5 +227,97 @@ fn handshake_failure(error: &io::Error) -> Outcome {
     match tls {
         Some(rustls::Error::InvalidCertificate(_)) => Outcome::Certificate,
         _ => Outcome::Cut,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::future::{Future, pending};
+    use std::io;
+    use std::net::SocketAddr;
+    use std::pin::Pin;
+    use std::time::Duration;
+
+    use tokio::time::Instant;
+
+    use super::{STAGGER, first_connected};
+
+    type Attempt = Pin<Box<dyn Future<Output = io::Result<u16>> + Send>>;
+
+    fn addresses(ports: &[u16]) -> Vec<SocketAddr> {
+        ports
+            .iter()
+            .map(|&port| SocketAddr::from(([127, 0, 0, 1], port)))
+            .collect()
+    }
+
+    /// Port 1 never answers, port 2 is refused after `refused`, any other
+    /// connects after `delay`.
+    fn attempt(address: SocketAddr, refused: Duration, delay: Duration) -> Attempt {
+        match address.port() {
+            1 => Box::pin(pending()),
+            2 => Box::pin(async move {
+                tokio::time::sleep(refused).await;
+                Err(io::ErrorKind::ConnectionRefused.into())
+            }),
+            port => Box::pin(async move {
+                tokio::time::sleep(delay).await;
+                Ok(port)
+            }),
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn an_address_that_never_answers_does_not_hold_up_the_next() {
+        let started = Instant::now();
+        let connected = first_connected(&addresses(&[1, 443]), |a| {
+            attempt(a, Duration::ZERO, Duration::from_millis(10))
+        })
+        .await;
+        assert_eq!(connected, Some(443));
+        assert_eq!(started.elapsed(), STAGGER + Duration::from_millis(10));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_refusal_moves_on_at_once() {
+        let started = Instant::now();
+        let connected = first_connected(&addresses(&[2, 443]), |a| {
+            attempt(a, Duration::from_millis(5), Duration::from_millis(10))
+        })
+        .await;
+        assert_eq!(connected, Some(443));
+        assert_eq!(started.elapsed(), Duration::from_millis(15));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn the_first_address_wins_when_it_connects_in_time() {
+        let connected = first_connected(&addresses(&[80, 443]), |a| {
+            attempt(a, Duration::ZERO, Duration::from_millis(100))
+        })
+        .await;
+        assert_eq!(connected, Some(80));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_slow_first_address_still_wins_if_it_connects_first() {
+        // 80 takes 300 ms; 443, started at 250 ms, would take until 550 ms.
+        let connected = first_connected(&addresses(&[80, 443]), |a| {
+            attempt(a, Duration::ZERO, Duration::from_millis(300))
+        })
+        .await;
+        assert_eq!(connected, Some(80));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn when_every_address_fails_there_is_no_connection() {
+        let connected = first_connected(&addresses(&[2, 2, 2]), |a| {
+            attempt(a, Duration::from_secs(2), Duration::ZERO)
+        })
+        .await;
+        assert_eq!(connected, None);
+        assert_eq!(
+            first_connected(&[], |a| attempt(a, Duration::ZERO, Duration::ZERO)).await,
+            None
+        );
     }
 }
