@@ -1,7 +1,13 @@
-# Downloads WinDivert 2.2.2 (the version jink compiles in), checks it is the
-# published file, and puts its driver and license into a folder: the folder
-# jink.exe ships in. Usage: scripts\windivert.ps1 -Out dist
-param([Parameter(Mandatory = $true)][string]$Out)
+# Downloads WinDivert 2.2.2, checks it is the published file, and puts what
+# jink.exe needs next to it into -Out: WinDivert.dll (the author's signed
+# build, which jink links to), WinDivert64.sys and the license. With -Sdk,
+# also the files to build against (WinDivert.lib) into that folder; set
+# WINDIVERT_PATH to it when building.
+# Usage: scripts\windivert.ps1 -Out dist [-Sdk windivert-sdk]
+param(
+    [Parameter(Mandatory = $true)][string]$Out,
+    [string]$Sdk
+)
 $ErrorActionPreference = 'Stop'
 
 $url = 'https://github.com/basil00/WinDivert/releases/download/v2.2.2/WinDivert-2.2.2-A.zip'
@@ -17,10 +23,19 @@ try {
         throw "WinDivert download has SHA-256 $actual, expected $sha256"
     }
     Expand-Archive -Path $zip -DestinationPath $work
+    $x64 = Join-Path $work 'WinDivert-2.2.2-A\x64'
     New-Item -ItemType Directory -Force -Path $Out | Out-Null
-    Copy-Item (Join-Path $work 'WinDivert-2.2.2-A\x64\WinDivert64.sys') $Out
+    Copy-Item (Join-Path $x64 'WinDivert.dll') $Out
+    Copy-Item (Join-Path $x64 'WinDivert64.sys') $Out
     Copy-Item (Join-Path $work 'WinDivert-2.2.2-A\LICENSE') (Join-Path $Out 'WinDivert-LICENSE.txt')
-    Write-Host "WinDivert64.sys and its license are in $Out"
+    Write-Host "WinDivert.dll, WinDivert64.sys and the license are in $Out"
+    if ($Sdk) {
+        New-Item -ItemType Directory -Force -Path $Sdk | Out-Null
+        foreach ($file in 'WinDivert.dll', 'WinDivert.lib', 'WinDivert64.sys') {
+            Copy-Item (Join-Path $x64 $file) $Sdk
+        }
+        Write-Host "WinDivert.lib (to build against) is in $Sdk"
+    }
 }
 finally {
     Remove-Item -Recurse -Force $work

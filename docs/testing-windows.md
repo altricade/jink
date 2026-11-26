@@ -13,7 +13,7 @@ Each test takes a few minutes.
    **jink-windows** to download a zip.
 3. Unzip it to `C:\jink`: right-click the zip → **Extract All…**, type
    `C:\jink` as the destination → **Extract**. The folder now has
-   `jink.exe` and `WinDivert64.sys` (and two license files).
+   `jink.exe`, `WinDivert.dll` and `WinDivert64.sys` (and two license files).
 4. **Stop zapret**, so that two programs don't rewrite the same packets:
    - If zapret runs as a service: right-click its `service.bat` → **Run as
      administrator** → choose **Remove Services**.

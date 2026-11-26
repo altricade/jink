@@ -10,12 +10,16 @@ publish.workspace = true
 jink-core = { path = "../jink-core" }
 thiserror.workspace = true
 
-# WinDivert 2.2 (LGPL-3.0-or-later). Build on Windows with WINDIVERT_STATIC=1
-# to compile the crate's own copy into the executable (scripts/ and CI do);
-# WinDivert64.sys (same version) must sit next to it. From a Mac, lint with
-# WINDIVERT_PATH set to any folder instead (the README shows how). 0.7 (a
-# beta, pinned) is the first to receive with a time limit, which lets the
-# capture loop stop when asked and release held packets on a quiet network.
+# WinDivert 2.2.2 (LGPL-3.0-or-later), linked to as the author's signed
+# WinDivert.dll: build with WINDIVERT_PATH set to a folder with its
+# WinDivert.lib (scripts/windivert.ps1 -Sdk makes one); WinDivert.dll and
+# WinDivert64.sys must sit next to jink.exe. Not compiled in: WinDivert's
+# source defines its own memcpy and memset (for its CRT-free DLL), which in
+# an executable replace the C runtime's and call themselves forever. From a
+# Mac, lint with WINDIVERT_PATH set to any folder (the README shows how).
+# 0.7 (a beta, pinned) is the first to receive with a time limit, which lets
+# the capture loop stop when asked and release held packets on a quiet
+# network.
 [target.'cfg(windows)'.dependencies]
 windivert = "=0.7.0-beta.4"
 

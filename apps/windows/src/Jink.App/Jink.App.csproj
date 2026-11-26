@@ -40,4 +40,20 @@
   <ItemGroup>
     <Content Include="Assets\*.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- The Windows App SDK adds source files of its own to the app (they set
+       up its runtime). They are Microsoft's, not jink's: analyzers skip
+       them, through a config naming exactly those files, made at build
+       time because their path is on this machine's package folder. -->
+  <Target Name="SkipAnalyzingPackageSources" BeforeTargets="CoreCompile" AfterTargets="GenerateUndockedRegFreeWinRTCS">
+    <ItemGroup>
+      <_PackageSource Include="@(Compile->'%(FullPath)')" Condition="$([System.String]::Copy('%(Compile.FullPath)').StartsWith('$(NuGetPackageRoot)', StringComparison.OrdinalIgnoreCase))" />
+      <_PackageSource>
+        <ConfigPath>$([System.String]::Copy('%(FullPath)').Replace('\', '/'))</ConfigPath>
+      </_PackageSource>
+    </ItemGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)package-sources.globalconfig" Lines="is_global = true;@(_PackageSource->'[%(ConfigPath)]%0Adotnet_analyzer_diagnostic.severity = none')" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <GlobalAnalyzerConfigFiles Include="$(IntermediateOutputPath)package-sources.globalconfig" />
+    </ItemGroup>
+  </Target>
 </Project>

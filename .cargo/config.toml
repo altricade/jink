@@ -1,0 +1,4 @@
+# The C runtime compiled into jink.exe, so that it runs on PCs without the
+# Visual C++ Redistributable (otherwise: "VCRUNTIME140.dll was not found").
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
