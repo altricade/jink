@@ -1,0 +1,47 @@
+# jink on a real Windows machine: format, lint and tests, then a release
+# build that is installed as a service and used (scripts/windows-smoke.ps1).
+# The built jink.exe with its WinDivert driver is kept as the "jink-windows"
+# artifact of each run.
+name: windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: windows-latest
+    env:
+      # Compile WinDivert's user-mode library into jink.exe.
+      WINDIVERT_STATIC: "1"
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      - name: Build
+        run: cargo build --release -p jink-cli
+      - name: Package
+        shell: pwsh
+        run: |
+          scripts/windivert.ps1 -Out dist
+          Copy-Item target/release/jink.exe dist/
+          Copy-Item LICENSE dist/LICENSE.txt
+      - name: Smoke test (service, pipe, capture)
+        shell: pwsh
+        run: scripts/windows-smoke.ps1 -Dist dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jink-windows
+          path: dist/
+          if-no-files-found: error

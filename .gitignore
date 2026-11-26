@@ -5,3 +5,4 @@
 /apps/macos/build/
 /apps/macos/JinkKit/.build/
 /apps/macos/JinkKit/.swiftpm/
+/dist/

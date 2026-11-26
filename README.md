@@ -45,20 +45,23 @@ For a step-by-step guide that assumes no developer setup, see
 2. Stop zapret first, so two programs don't rewrite the same packets: run
    zapret-discord-youtube's `service.bat` and remove its service, or close
    `winws.exe`.
-3. Build, passing your zapret-discord-youtube folder so its signed
-   `WinDivert64.sys` (WinDivert 2.2.2) is copied next to `jink.exe`:
+3. Build:
 
    ```bat
-   scripts\build-windows.cmd C:\path\to\zapret-discord-youtube
+   scripts\build-windows.cmd
    ```
 
    This sets `WINDIVERT_STATIC=1`, which compiles WinDivert's user-mode
-   library (also 2.2.2) into `jink.exe`.
+   library (2.2) into `jink.exe`, and downloads the signed
+   `WinDivert64.sys` (WinDivert 2.2.2, checked against its published
+   SHA-256) next to it in `dist`. GitHub Actions builds the same `dist` on
+   every push (`.github/workflows/windows.yml`), runs the tests there, and
+   tries the result as a service (`scripts/windows-smoke.ps1`).
 4. From a terminal opened **as Administrator**:
 
    ```bat
-   target\release\jink.exe check "C:\path\to\zapret-discord-youtube\general.bat"
-   target\release\jink.exe run   "C:\path\to\zapret-discord-youtube\general.bat"
+   dist\jink.exe check "C:\path\to\zapret-discord-youtube\general.bat"
+   dist\jink.exe run   "C:\path\to\zapret-discord-youtube\general.bat"
    ```
 
    `--game-filter on` matches service.bat's game filter. Ctrl+C stops jink;
