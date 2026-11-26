@@ -8,6 +8,10 @@ pub mod filter;
 
 #[cfg(windows)]
 mod capture;
+#[cfg(windows)]
+mod timestamps;
 
 #[cfg(windows)]
 pub use capture::{Event, RunError, run};
+#[cfg(windows)]
+pub use timestamps::enable_tcp_timestamps;

@@ -4,11 +4,12 @@
 //! - `jink run <strategy.bat>` runs it: on Windows (as Administrator) with
 //!   WinDivert, `WinDivert64.sys` next to `jink.exe`; on macOS (with sudo)
 //!   through a utun interface.
-//! - `jink service install|uninstall|status` (macOS) runs it at every
-//!   startup instead.
+//! - `jink daemon` (macOS) is the background service the apps control;
+//!   `jink service install|uninstall|status` sets it up to run at every
+//!   startup, and `jink ctl` controls it from the terminal.
 
-#[cfg(any(windows, target_os = "macos", test))]
-mod entropy;
+#[cfg(target_os = "macos")]
+mod ctl;
 mod report;
 #[cfg(target_os = "macos")]
 mod service;
@@ -47,27 +48,31 @@ enum Command {
         #[arg(long)]
         allow_partial: bool,
     },
-    /// Run jink as a service: at every startup, without a terminal.
+    /// Run the jink daemon (with sudo), which the apps and `jink ctl`
+    /// control; normally the service runs it.
+    #[cfg(target_os = "macos")]
+    Daemon,
+    /// Install the daemon as a service, running at every startup.
     #[cfg(target_os = "macos")]
     Service {
         #[command(subcommand)]
         action: ServiceAction,
+    },
+    /// Control the daemon: start, stop, strategies, settings.
+    #[cfg(target_os = "macos")]
+    Ctl {
+        #[command(subcommand)]
+        command: ctl::Ctl,
     },
 }
 
 #[cfg(target_os = "macos")]
 #[derive(Debug, Subcommand)]
 enum ServiceAction {
-    /// Install a strategy as the service and start it (with sudo). It
-    /// replaces the strategy installed before.
-    Install {
-        #[command(flatten)]
-        strategy: StrategyArgs,
-        /// As for `run`.
-        #[arg(long)]
-        allow_partial: bool,
-    },
-    /// Stop and remove the service (with sudo).
+    /// Install the service and start its daemon (with sudo); a new version
+    /// of jink replaces the installed one.
+    Install,
+    /// Stop and remove the service and its settings (with sudo).
     Uninstall,
     /// Show whether the service is installed and running.
     Status,
@@ -111,8 +116,20 @@ enum CliError {
     #[error(transparent)]
     Service(#[from] jink_macos::service::ServiceError),
     #[cfg(target_os = "macos")]
-    #[error("the strategy must be a .bat file")]
-    NotAFile,
+    #[error(transparent)]
+    Daemon(#[from] jink_daemon::DaemonError),
+    #[cfg(target_os = "macos")]
+    #[error(
+        "cannot reach the jink daemon ({0}); is the service installed \
+         (`sudo jink service install`)?"
+    )]
+    NoDaemon(std::io::Error),
+    #[cfg(target_os = "macos")]
+    #[error("not JSON: {0}")]
+    Json(String),
+    #[cfg(target_os = "macos")]
+    #[error("the daemon refused the request")]
+    Refused,
     #[cfg(not(any(windows, target_os = "macos")))]
     #[error("`jink run` needs Windows or macOS; `jink check` works here")]
     RunUnsupported,
@@ -152,9 +169,19 @@ fn run(args: &StrategyArgs, allow_partial: bool) -> Result<(), CliError> {
     if partial && !allow_partial {
         return Err(CliError::Partial);
     }
+    // As zapret does before every run. Without them, fakes that fool with
+    // timestamps cannot be made; the rest of the strategy still works.
+    if config.uses_tcp_timestamps()
+        && let Err(e) = jink_windivert::enable_tcp_timestamps()
+    {
+        let _ = writeln!(
+            std::io::stderr().lock(),
+            "jink: cannot turn on TCP timestamps ({e}); this strategy's timestamp fakes will not work"
+        );
+    }
     let filter = build(&config.capture, FilterOptions::default())?;
     let rules = config.rules.len();
-    let entropy = entropy::OsSeeded::new().map_err(CliError::Entropy)?;
+    let entropy = jink_daemon::entropy::OsSeeded::new().map_err(CliError::Entropy)?;
     let mut engine = PacketEngine::new(config, Box::new(entropy));
     {
         let mut out = std::io::stdout().lock();
@@ -188,7 +215,7 @@ fn macos_engine(
     allow_partial: bool,
 ) -> Result<(jink_core::engine::stream::StreamEngine, usize), CliError> {
     let config = strategy::load(&args.strategy, args.game_filter)?;
-    let entropy = Box::new(entropy::OsSeeded::new().map_err(CliError::Entropy)?);
+    let entropy = Box::new(jink_daemon::entropy::OsSeeded::new().map_err(CliError::Entropy)?);
     let (engine, unsupported) = jink_core::engine::stream::StreamEngine::partial(config, entropy);
     if !unsupported.is_empty() && !allow_partial {
         return Err(CliError::Partial);
@@ -323,14 +350,16 @@ fn main() -> ExitCode {
             allow_partial,
         } => run(strategy, *allow_partial),
         #[cfg(target_os = "macos")]
+        Command::Daemon => jink_daemon::run(std::path::Path::new(jink_macos::service::HOME))
+            .map_err(CliError::from),
+        #[cfg(target_os = "macos")]
         Command::Service { action } => match action {
-            ServiceAction::Install {
-                strategy,
-                allow_partial,
-            } => service::install(strategy, *allow_partial),
+            ServiceAction::Install => service::install(),
             ServiceAction::Uninstall => service::uninstall(),
             ServiceAction::Status => service::status(),
         },
+        #[cfg(target_os = "macos")]
+        Command::Ctl { command } => ctl::run(command),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

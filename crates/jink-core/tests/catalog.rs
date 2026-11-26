@@ -111,6 +111,18 @@ fn every_strategy_builds_what_its_original_does() -> Result<()> {
 }
 
 #[test]
+fn strategies_that_fool_with_timestamps_say_so() -> Result<()> {
+    let defaults = Settings::default();
+    let uses = |id: &str| -> Result<bool> {
+        let strategy = catalog::find(id).ok_or("unknown strategy")?;
+        Ok(catalog::build(strategy, &defaults)?.uses_tcp_timestamps())
+    };
+    assert!(uses("alt")? && uses("alt13")? && uses("alt10")?);
+    assert!(!uses("alt4")? && !uses("general")? && !uses("simple-fake-alt")?);
+    Ok(())
+}
+
+#[test]
 fn ids_are_unique_and_variants_name_a_main_strategy() {
     let ids: HashSet<&str> = catalog::all().iter().map(|s| s.id).collect();
     assert_eq!(ids.len(), catalog::all().len());

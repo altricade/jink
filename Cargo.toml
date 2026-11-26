@@ -1,6 +1,12 @@
 [workspace]
 resolver = "3"
-members = ["crates/jink-cli", "crates/jink-core", "crates/jink-macos", "crates/jink-windivert"]
+members = [
+    "crates/jink-cli",
+    "crates/jink-core",
+    "crates/jink-daemon",
+    "crates/jink-macos",
+    "crates/jink-windivert",
+]
 
 [workspace.package]
 edition = "2024"
@@ -11,6 +17,9 @@ publish = false
 [workspace.dependencies]
 etherparse = "0.21"
 thiserror = "2"
+# The control channel and saved state (JSON).
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
 # QUIC Initial decryption (RFC 9001 §5). Pure Rust, no OS RNG needed to decrypt.
 aes = "0.9"
 aes-gcm = { version = "0.11", default-features = false, features = ["aes", "alloc"] }

@@ -12,19 +12,17 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"] }
+getrandom = "0.4.3"
 jink-core = { path = "../jink-core" }
+jink-daemon = { path = "../jink-daemon" }
+serde_json.workspace = true
 thiserror.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-getrandom = "0.4.3"
 jink-windivert = { path = "../jink-windivert" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-getrandom = "0.4.3"
 jink-macos = { path = "../jink-macos" }
-
-[dev-dependencies]
-getrandom = "0.4.3"
 
 [lints]
 workspace = true

@@ -43,4 +43,4 @@ pub use link::LinkError;
 #[cfg(target_os = "macos")]
 pub use relay::RelayError;
 #[cfg(target_os = "macos")]
-pub use run::{Event, RunError, Summary, run};
+pub use run::{Event, RunError, Summary, run, serve};

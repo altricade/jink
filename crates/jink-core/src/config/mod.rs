@@ -27,6 +27,15 @@ pub struct Config {
     pub warnings: Vec<String>,
 }
 
+impl Config {
+    /// Whether a rule fools with TCP timestamps, which then must be on for
+    /// the connection (Windows has them off unless turned on).
+    #[must_use]
+    pub fn uses_tcp_timestamps(&self) -> bool {
+        self.rules.iter().any(|r| r.desync.fooling.ts)
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Capture {
     pub tcp: Option<PortFilter>,

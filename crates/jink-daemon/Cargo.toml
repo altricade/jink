@@ -1,0 +1,22 @@
+[package]
+name = "jink-daemon"
+description = "jink's background service: runs the engine, keeps the settings, and answers the apps over a local control channel."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Seeds the random fields of fakes.
+getrandom = "0.4.3"
+jink-core = { path = "../jink-core" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "signal", "time"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+jink-macos = { path = "../jink-macos" }
+
+[lints]
+workspace = true

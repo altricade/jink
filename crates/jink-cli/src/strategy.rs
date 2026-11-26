@@ -19,15 +19,6 @@ pub(crate) enum GameFilter {
 }
 
 impl GameFilter {
-    /// The command-line value that selects it.
-    #[cfg(any(target_os = "macos", test))]
-    pub(crate) const fn arg(self) -> &'static str {
-        match self {
-            Self::Off => "off",
-            Self::On => "on",
-        }
-    }
-
     const fn ports(self) -> &'static str {
         match self {
             Self::Off => "12",
@@ -79,43 +70,6 @@ fn base(bat: &Path) -> &Path {
         .unwrap_or_else(|| Path::new("."))
 }
 
-/// The files a strategy can use, to copy it elsewhere: each as its path and
-/// its path relative to the strategy's folder. These are `bat` itself,
-/// everything in `lists/`, and the payloads (`*.bin`) in `bin/`; the
-/// Windows binaries there are not needed.
-#[cfg(any(target_os = "macos", test))]
-pub(crate) fn files(bat: &Path) -> Result<Vec<(PathBuf, PathBuf)>, LoadError> {
-    let read = |path: PathBuf| {
-        let entries = std::fs::read_dir(&path).map_err(|source| LoadError::Read {
-            path: path.clone(),
-            source,
-        })?;
-        entries
-            .map(|entry| {
-                entry.map(|e| e.path()).map_err(|source| LoadError::Read {
-                    path: path.clone(),
-                    source,
-                })
-            })
-            .collect::<Result<Vec<_>, _>>()
-    };
-    let name = |path: &Path| path.file_name().map(PathBuf::from);
-    let mut files: Vec<(PathBuf, PathBuf)> = Vec::new();
-    files.extend(name(bat).map(|n| (bat.to_path_buf(), n)));
-    let base = base(bat);
-    for (folder, wanted) in [("lists", None), ("bin", Some("bin"))] {
-        for path in read(base.join(folder))? {
-            let kept = path.is_file()
-                && wanted.is_none_or(|ext| path.extension().is_some_and(|e| e == ext));
-            if let (true, Some(n)) = (kept, name(&path)) {
-                files.push((path, Path::new(folder).join(n)));
-            }
-        }
-    }
-    files.sort();
-    Ok(files)
-}
-
 pub(crate) fn load(bat: &Path, game_filter: GameFilter) -> Result<Config, LoadError> {
     let text = std::fs::read_to_string(bat).map_err(|source| LoadError::Read {
         path: bat.to_path_buf(),
@@ -138,7 +92,7 @@ pub(crate) fn load(bat: &Path, game_filter: GameFilter) -> Result<Config, LoadEr
 mod tests {
     use std::path::{Path, PathBuf};
 
-    use super::{GameFilter, files, load};
+    use super::{GameFilter, load};
 
     /// A throwaway copy of the bundle layout: `general.bat`, `bin/`, `lists/`
     /// (without the `*-user.txt` lists, as before `service.bat` first runs).
@@ -175,34 +129,5 @@ mod tests {
         assert!(on.rules[7].matcher.tcp_ports.contains(27015));
         assert!(load(&dir.join("missing.bat"), GameFilter::Off).is_err());
         std::fs::remove_dir_all(dir).unwrap();
-    }
-
-    #[test]
-    fn a_strategy_copies_with_its_lists_and_payloads() {
-        let dir = bundle_copy("files");
-        std::fs::write(dir.join("bin/winws.exe"), b"MZ").unwrap();
-        let copied = files(&dir.join("general.bat")).unwrap();
-        let inside: Vec<_> = copied.iter().map(|(_, to)| to.clone()).collect();
-        assert!(inside.contains(&PathBuf::from("general.bat")));
-        assert!(inside.contains(&PathBuf::from("lists/list-general.txt")));
-        assert!(inside.contains(&PathBuf::from("bin/tls_clienthello_www_google_com.bin")));
-        assert!(!inside.contains(&PathBuf::from("bin/winws.exe")));
-        for (from, to) in &copied {
-            assert_eq!(from, &dir.join(to));
-        }
-        // The copy loads like the original.
-        let target = std::env::temp_dir().join(format!("jink-cli-copy-{}", std::process::id()));
-        for (from, to) in &copied {
-            let to = target.join(to);
-            std::fs::create_dir_all(to.parent().unwrap()).unwrap();
-            std::fs::copy(from, to).unwrap();
-        }
-        assert_eq!(
-            load(&target.join("general.bat"), GameFilter::Off).unwrap(),
-            load(&dir.join("general.bat"), GameFilter::Off).unwrap()
-        );
-        assert_eq!(GameFilter::On.arg(), "on");
-        std::fs::remove_dir_all(dir).unwrap();
-        std::fs::remove_dir_all(target).unwrap();
     }
 }

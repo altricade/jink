@@ -138,13 +138,11 @@ fn bump(counter: &AtomicU64) {
 
 pub(crate) type OnEvent = Arc<dyn Fn(Event) + Send + Sync>;
 
-/// Routes all IPv4 traffic through jink, desyncing TCP connections and UDP
-/// flows as `engine` plans, until SIGINT (Ctrl+C), SIGTERM or SIGHUP. Needs
-/// root. Follows the network as it changes, and steps aside while there is
-/// none.
+/// [`serve`] on a runtime of its own, until SIGINT (Ctrl+C), SIGTERM or
+/// SIGHUP.
 ///
 /// # Errors
-/// If setting up fails (nothing is left changed), or the stack stops.
+/// As [`serve`], or if the runtime or signal handlers cannot be set up.
 pub fn run(
     engine: StreamEngine,
     on_event: impl Fn(Event) + Send + Sync + 'static,
@@ -153,10 +151,34 @@ pub fn run(
         .enable_all()
         .build()
         .map_err(RunError::Runtime)?
-        .block_on(serve(engine, Arc::new(on_event)))
+        .block_on(async {
+            let mut interrupt = signal(SignalKind::interrupt()).map_err(RunError::Runtime)?;
+            let mut terminate = signal(SignalKind::terminate()).map_err(RunError::Runtime)?;
+            let mut hangup = signal(SignalKind::hangup()).map_err(RunError::Runtime)?;
+            let signalled = async move {
+                tokio::select! {
+                    _ = interrupt.recv() => {}
+                    _ = terminate.recv() => {}
+                    _ = hangup.recv() => {}
+                }
+            };
+            serve(engine, on_event, signalled).await
+        })
 }
 
-async fn serve(engine: StreamEngine, on_event: OnEvent) -> Result<Summary, RunError> {
+/// Routes all IPv4 traffic through jink, desyncing TCP connections and UDP
+/// flows as `engine` plans, until `stop` completes. Needs root and a Tokio
+/// runtime. Follows the network as it changes, and steps aside while there
+/// is none.
+///
+/// # Errors
+/// If setting up fails (nothing is left changed), or the stack stops.
+pub async fn serve(
+    engine: StreamEngine,
+    on_event: impl Fn(Event) + Send + Sync + 'static,
+    stop: impl Future<Output = ()>,
+) -> Result<Summary, RunError> {
+    let on_event: OnEvent = Arc::new(on_event);
     let lock = Lock::claim(instance::LOCK.as_ref()).map_err(|e| match e {
         ClaimError::Taken => RunError::AlreadyRunning,
         ClaimError::Io(e) if e.kind() == io::ErrorKind::PermissionDenied => RunError::NotRoot,
@@ -189,9 +211,6 @@ async fn serve(engine: StreamEngine, on_event: OnEvent) -> Result<Summary, RunEr
     let tun_name = device.name().map_err(RunError::Tun)?;
     let tun_index = device.if_index().map_err(RunError::Tun)?;
     let mut stack = IpStack::new(stack_config()?, TunIo(device));
-    let mut interrupt = signal(SignalKind::interrupt()).map_err(RunError::Runtime)?;
-    let mut terminate = signal(SignalKind::terminate()).map_err(RunError::Runtime)?;
-    let mut hangup = signal(SignalKind::hangup()).map_err(RunError::Runtime)?;
     let mut changes = AsyncRouteListener::new().map_err(RunError::RouteListener)?;
     let first_recheck = Instant::now()
         .checked_add(RECHECK)
@@ -203,11 +222,10 @@ async fn serve(engine: StreamEngine, on_event: OnEvent) -> Result<Summary, RunEr
     network.refresh();
 
     let mut settled_at: Option<Instant> = None;
+    tokio::pin!(stop);
     let stopped = loop {
         tokio::select! {
-            _ = interrupt.recv() => break Ok(()),
-            _ = terminate.recv() => break Ok(()),
-            _ = hangup.recv() => break Ok(()),
+            () = &mut stop => break Ok(()),
             change = changes.listen() => {
                 // A change that could not be read may have been one that
                 // matters.

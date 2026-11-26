@@ -5,10 +5,12 @@
 use jink_core::desync::Entropy;
 
 #[derive(Debug)]
-pub(crate) struct OsSeeded(u64);
+pub struct OsSeeded(u64);
 
 impl OsSeeded {
-    pub(crate) fn new() -> Result<Self, getrandom::Error> {
+    /// # Errors
+    /// If the OS has no randomness to give.
+    pub fn new() -> Result<Self, getrandom::Error> {
         // xorshift needs a non-zero state.
         Ok(Self(getrandom::u64()? | 1))
     }
