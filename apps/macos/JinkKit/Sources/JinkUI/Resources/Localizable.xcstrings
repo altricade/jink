@@ -1,0 +1,926 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%@ (partly)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (частично)"
+          }
+        }
+      }
+    },
+    "Addresses or networks (1.2.3.0/24) jink should also unblock.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адреса или сети (1.2.3.0/24), которые jink тоже должен разблокировать."
+          }
+        }
+      }
+    },
+    "Addresses or networks jink should leave alone.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Адреса или сети, которые jink не должен трогать."
+          }
+        }
+      }
+    },
+    "Advanced": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Дополнительно"
+          }
+        }
+      }
+    },
+    "All addresses": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все адреса"
+          }
+        }
+      }
+    },
+    "Also treat traffic to these addresses, whatever the site name.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обрабатывать трафик к этим адресам, каким бы ни было имя сайта."
+          }
+        }
+      }
+    },
+    "Also unblock game traffic to the servers of the IP list.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разблокировать и игровой трафик к серверам из списка IP."
+          }
+        }
+      }
+    },
+    "Another app (a VPN?) routes all traffic, so jink stands aside.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Другое приложение (VPN?) направляет весь трафик через себя, поэтому jink не вмешивается."
+          }
+        }
+      }
+    },
+    "Another copy of jink is running.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уже запущена другая копия jink."
+          }
+        }
+      }
+    },
+    "Background service": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фоновая служба"
+          }
+        }
+      }
+    },
+    "Built-in list": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Встроенный список"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отменить"
+          }
+        }
+      }
+    },
+    "Connecting to the background service…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключение к фоновой службе…"
+          }
+        }
+      }
+    },
+    "Details": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подробности"
+          }
+        }
+      }
+    },
+    "Excluded IPs": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исключённые IP"
+          }
+        }
+      }
+    },
+    "Excluded sites": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Исключённые сайты"
+          }
+        }
+      }
+    },
+    "Find the best strategy": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подобрать лучшую стратегию"
+          }
+        }
+      }
+    },
+    "Finding a strategy: trying %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подбор стратегии: пробуем %@"
+          }
+        }
+      }
+    },
+    "Finding a strategy…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подбор стратегии…"
+          }
+        }
+      }
+    },
+    "Gaming": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Игры"
+          }
+        }
+      }
+    },
+    "Gaming mode": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Игровой режим"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Основные"
+          }
+        }
+      }
+    },
+    "IP list": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Список IP"
+          }
+        }
+      }
+    },
+    "IPs": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IP-адреса"
+          }
+        }
+      }
+    },
+    "Install service": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Установить службу"
+          }
+        }
+      }
+    },
+    "It did not get online in time.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось вовремя выйти в сеть."
+          }
+        }
+      }
+    },
+    "It needs to be installed once; macOS asks for an administrator password.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Её нужно установить один раз; macOS запросит пароль администратора."
+          }
+        }
+      }
+    },
+    "Kept %@: %lld of %lld checks passed (%lld without jink).": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрана %@: пройдено %lld из %lld проверок (без jink — %lld)."
+          }
+        }
+      }
+    },
+    "My IPs": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мои IP"
+          }
+        }
+      }
+    },
+    "My sites": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мои сайты"
+          }
+        }
+      }
+    },
+    "No network: the sites could not be reached at all.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет сети: до сайтов вообще не удалось достучаться."
+          }
+        }
+      }
+    },
+    "No strategy did better than without jink.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ни одна стратегия не сработала лучше, чем без jink."
+          }
+        }
+      }
+    },
+    "Nothing is blocked here: every site works without jink.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Здесь ничего не заблокировано: все сайты работают без jink."
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выключено"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено"
+          }
+        }
+      }
+    },
+    "On, but not working: %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено, но не работает: %@"
+          }
+        }
+      }
+    },
+    "On, checking the network…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено, проверка сети…"
+          }
+        }
+      }
+    },
+    "On, via %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено, через %@"
+          }
+        }
+      }
+    },
+    "On, waiting for a network": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включено, ожидание сети"
+          }
+        }
+      }
+    },
+    "Protocols": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Протоколы"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выйти"
+          }
+        }
+      }
+    },
+    "Reinstall service": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переустановить службу"
+          }
+        }
+      }
+    },
+    "Remove service": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить службу"
+          }
+        }
+      }
+    },
+    "Revert": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отменить изменения"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить"
+          }
+        }
+      }
+    },
+    "Settings show once the background service runs.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки появятся, когда заработает фоновая служба."
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки…"
+          }
+        }
+      }
+    },
+    "Sites": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сайты"
+          }
+        }
+      }
+    },
+    "Sites jink should also unblock: one per line; links are fine.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сайты, которые jink тоже должен разблокировать: по одному в строке, можно ссылками."
+          }
+        }
+      }
+    },
+    "Sites jink should leave alone.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сайты, которые jink не должен трогать."
+          }
+        }
+      }
+    },
+    "Some connections went through unchanged.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некоторые соединения прошли без обработки."
+          }
+        }
+      }
+    },
+    "Some entries are not valid; nothing was saved.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некоторые записи неверны; ничего не сохранено."
+          }
+        }
+      }
+    },
+    "Some settings are not valid.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некоторые настройки неверны."
+          }
+        }
+      }
+    },
+    "Starting…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запуск…"
+          }
+        }
+      }
+    },
+    "Stopped: %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остановлено: %@"
+          }
+        }
+      }
+    },
+    "Strategy": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Стратегия"
+          }
+        }
+      }
+    },
+    "TCP and UDP": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TCP и UDP"
+          }
+        }
+      }
+    },
+    "TCP ports": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Порты TCP"
+          }
+        }
+      }
+    },
+    "Takes a minute or two. Sites may not open meanwhile.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Это займёт минуту-две. Пока сайты могут не открываться."
+          }
+        }
+      }
+    },
+    "The background service answered something this app does not understand. Update the service.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фоновая служба ответила непонятно для этого приложения. Обновите службу."
+          }
+        }
+      }
+    },
+    "The background service did not answer.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фоновая служба не ответила."
+          }
+        }
+      }
+    },
+    "The background service is from another version of jink.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фоновая служба — от другой версии jink."
+          }
+        }
+      }
+    },
+    "The request did not reach the background service.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запрос не дошёл до фоновой службы."
+          }
+        }
+      }
+    },
+    "The service does not know the strategy %@. Update the service.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Служба не знает стратегию %@. Обновите службу."
+          }
+        }
+      }
+    },
+    "The service does not run as administrator.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Служба запущена без прав администратора."
+          }
+        }
+      }
+    },
+    "There is no network.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет сети."
+          }
+        }
+      }
+    },
+    "This copy of the app is damaged: download it again.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта копия приложения повреждена: скачайте её заново."
+          }
+        }
+      }
+    },
+    "This strategy does not work with these settings.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта стратегия не работает с такими настройками."
+          }
+        }
+      }
+    },
+    "Turn on when the Mac starts": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включать при запуске Mac"
+          }
+        }
+      }
+    },
+    "UDP ports": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Порты UDP"
+          }
+        }
+      }
+    },
+    "Update service": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить службу"
+          }
+        }
+      }
+    },
+    "Without jink": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без jink"
+          }
+        }
+      }
+    },
+    "a non-Latin name: enter its xn-- form": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "имя не латиницей: введите его в форме xn--"
+          }
+        }
+      }
+    },
+    "an IP address: put it under IPs": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "это IP-адрес: добавьте его в IP-адреса"
+          }
+        }
+      }
+    },
+    "an empty line": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "пустая строка"
+          }
+        }
+      }
+    },
+    "connection cut": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "соединение оборвано"
+          }
+        }
+      }
+    },
+    "jink could not create its network interface.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink не смог создать свой сетевой интерфейс."
+          }
+        }
+      }
+    },
+    "jink could not read or change the network routes.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink не смог прочитать или изменить сетевые маршруты."
+          }
+        }
+      }
+    },
+    "jink could not remove all of its network routes.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink не смог удалить все свои сетевые маршруты."
+          }
+        }
+      }
+    },
+    "jink could not save its settings.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink не смог сохранить настройки."
+          }
+        }
+      }
+    },
+    "jink could not see or send network traffic.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink не смог видеть или отправлять сетевой трафик."
+          }
+        }
+      }
+    },
+    "jink stopped unexpectedly.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jink неожиданно остановился."
+          }
+        }
+      }
+    },
+    "jink's background service is not running.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фоновая служба jink не запущена."
+          }
+        }
+      }
+    },
+    "name not found": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "имя не найдено"
+          }
+        }
+      }
+    },
+    "no reply": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет ответа"
+          }
+        }
+      }
+    },
+    "not a port or range (like 1024-65535)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не порт и не диапазон (например, 1024-65535)"
+          }
+        }
+      }
+    },
+    "not a site name": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не имя сайта"
+          }
+        }
+      }
+    },
+    "not an IP address or network": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не IP-адрес и не сеть"
+          }
+        }
+      }
+    },
+    "the ending is missing (youtube.com, not youtube)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет окончания (youtube.com, а не youtube)"
+          }
+        }
+      }
+    },
+    "timed out": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "время ожидания истекло"
+          }
+        }
+      }
+    },
+    "unreachable": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "недоступен"
+          }
+        }
+      }
+    },
+    "wrong certificate (a block page?)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "чужой сертификат (страница блокировки?)"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

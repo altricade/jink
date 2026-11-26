@@ -105,6 +105,10 @@ PATH="$HOME/.cargo/bin:/opt/homebrew/opt/llvm/bin:/opt/homebrew/opt/lld/bin:$PAT
   cargo xwin clippy --workspace --all-targets --target x86_64-pc-windows-msvc -- -D warnings
 ```
 
+The macOS app (`apps/macos`) has its own checks, `apps/macos/check.sh`: the
+JinkKit package's tests (Swift 6, warnings are errors), the app's build
+(XcodeGen and Xcode), and its String Catalog against the code.
+
 Lints in `Cargo.toml` deny `unsafe`, `unwrap`/`expect`/`panic`, unchecked
 indexing, unchecked arithmetic and `as` casts.
 

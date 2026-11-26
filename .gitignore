@@ -1,1 +1,7 @@
 /target
+
+# The macOS app: generated project and build output
+/apps/macos/Jink.xcodeproj/
+/apps/macos/build/
+/apps/macos/JinkKit/.build/
+/apps/macos/JinkKit/.swiftpm/
