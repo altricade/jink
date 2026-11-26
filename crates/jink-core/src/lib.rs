@@ -14,6 +14,7 @@
 //! OS backends (WinDivert on Windows, utun + raw sockets on macOS) live in
 //! their own crates and feed this one.
 
+pub mod catalog;
 pub mod config;
 mod cursor;
 pub mod desync;
@@ -22,3 +23,4 @@ pub mod l7;
 pub mod lists;
 pub mod packet;
 pub mod rules;
+pub mod settings;
